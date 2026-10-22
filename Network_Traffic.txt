@@ -1,0 +1,29 @@
+[GET] https://raw.githubusercontent.com/realkidhub/Games/refs/heads/main/BloxFruits.lua
+[GET] https://cdnrealkidhub.pages.dev/BloxFruits.lua
+[GET] https://raw.githubusercontent.com/traurobloxdeptrai/traukhoaito/refs/heads/main/anhdomixi.lua
+[POST] https://webhook.trungdao2k4.workers.dev/
+Body: {"hwid":"7b61386265333134302d393164652d313166312d393366392d3830366536663665363936337d","action":"auth","hwid2":"EF570513-ECC3-4260-8D2B-995C8D849B85","nonce":"75FF0BDD-45E4-4E1E-8EC2-293BD0FD1310","key":"TRAU_D681832834B3C47DC3B817046FDEAFAF32E0911348B00509"}
+-------------------
+[GET] https://cdnrealkidhub.pages.dev/anhdomixi.lua
+[GET] https://raw.githubusercontent.com/realkidhub/Games/refs/heads/main/BloxFruits.lua
+[GET] https://cdnrealkidhub.pages.dev/BloxFruits.lua
+[GET] https://raw.githubusercontent.com/traurobloxdeptrai/traukhoaito/refs/heads/main/anhdomixi.lua
+[POST] https://webhook.trungdao2k4.workers.dev/
+Body: {"hwid":"7b61386265333134302d393164652d313166312d393366392d3830366536663665363936337d","action":"auth","hwid2":"EF570513-ECC3-4260-8D2B-995C8D849B85","nonce":"A13AADEC-AD6E-4883-949F-A96B71E5DEDE","key":"TRAU_D681832834B3C47DC3B817046FDEAFAF32E0911348B00509"}
+-------------------
+[GET] https://cdnrealkidhub.pages.dev/anhdomixi.lua
+[POST] https://realkidapi.online/api.php
+Body: {"type":"Berries","name":"White Cloud Berry","jobId":"b4e3c9d7-0bb1-4ec6-a90f-0f1242ba6bc1","placeId":79091703265657}
+-------------------
+[POST] https://realkidapi.online/api.php
+Body: {"type":"Boss","name":"Core","jobId":"b4e3c9d7-0bb1-4ec6-a90f-0f1242ba6bc1","placeId":79091703265657}
+-------------------
+[POST] https://realkidapi.online/api.php
+Body: {"type":"Boss","name":"Cursed Captain","jobId":"b4e3c9d7-0bb1-4ec6-a90f-0f1242ba6bc1","placeId":79091703265657}
+-------------------
+[POST] https://realkidapi.online/api.php
+Body: {"deleted":true,"placeId":79091703265657,"name":"Core","jobId":"b4e3c9d7-0bb1-4ec6-a90f-0f1242ba6bc1"}
+-------------------
+[POST] https://realkidapi.online/api.php
+Body: {"deleted":true,"placeId":79091703265657,"name":"Cursed Captain","jobId":"b4e3c9d7-0bb1-4ec6-a90f-0f1242ba6bc1"}
+-------------------
