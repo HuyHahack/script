@@ -181,22 +181,21 @@ end
 StartCGHKeySystem(function()
     print("[+] CGH Auth passed. Đang khởi chạy Blox Fruits engine...")
 
-    -- Hook loadstring để tóm đoạn load UI Library
-    -- Thay đổi Brand và Logo cờ Việt Nam ngay khi máy ảo Luraph unpack UI Library
+    -- Hook loadstring để ép logo và title CGH
     local orig_loadstring
     orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
         if type(src) == "string" and string.find(src, "Nousigi Hub") then
-            -- Thay brand trong source code UI Library
+            -- Đổi tên Brand
             src = src:gsub("Nousigi Hub", "CGH Hub")
             src = src:gsub("Nousigi", "CGH")
 
-            -- Ghi đè hàm CreateWindow để ép logo cờ Việt Nam và Title CGH Hub
+            -- Override CreateWindow TRƯỚC return Library để không lỗi cú pháp
             local injectOverride = [[
                 local _orig_CreateWindow = Library.CreateWindow
                 function Library:CreateWindow(Setting)
                     Setting = Setting or {}
                     Setting.Title = "CGH Hub"
-                    Setting.Desc = "Blox Fruits | CGH Team"
+                    Setting.Desc = "Blox Fruits - CGH Team"
                     local customLogo = (isfile and isfile("cgh_logo.png") and getcustomasset and getcustomasset("cgh_logo.png"))
                     Setting.Image = customLogo or "rbxassetid://96220014754961"
                     getgenv().UIColor["Logo Image"] = Setting.Image
@@ -205,9 +204,14 @@ StartCGHKeySystem(function()
                     return _orig_CreateWindow(self, Setting)
                 end
             ]]
-            src = src .. "\n" .. injectOverride
+            src = src:gsub("return Library", injectOverride .. "\nreturn Library")
         end
-        return orig_loadstring(src, chunkname, ...)
+        
+        if chunkname ~= nil then
+            return orig_loadstring(src, chunkname, ...)
+        else
+            return orig_loadstring(src)
+        end
     end)
 
     -- Tải và chạy BloxFruits Core (đã gọt sạch backdoor trauroblox/anhdomixi)
@@ -219,8 +223,13 @@ StartCGHKeySystem(function()
     end
 
     if coreScript and #coreScript > 100 then
-        loadstring(coreScript)()
-        print("[+] CGH Hub Blox Fruits đã kích hoạt thành công!")
+        local fn, err = loadstring(coreScript)
+        if fn then
+            fn()
+            print("[+] CGH Hub Blox Fruits đã kích hoạt thành công!")
+        else
+            warn("[!] Lỗi compile BloxFruits_Core: " .. tostring(err))
+        end
     else
         warn("[!] Không thể tải BloxFruits_Core.luau!")
     end
