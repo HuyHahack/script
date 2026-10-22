@@ -21,7 +21,19 @@ local function getCustomLogo()
     return "rbxassetid://96220014754961"
 end
 
--- [2. GIAO DIỆN AUTH / KEY SYSTEM CHO CGH HUB]
+-- [2. HOOK SETCLIPBOARD: MỌI LINK DISCORD ĐỀU THÀNH RICK ROLL]
+local RICK_ROLL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+if setclipboard then
+    local orig_setclipboard = setclipboard
+    setclipboard = function(text)
+        if type(text) == "string" and (string.find(text, "discord%.gg") or string.find(text, "discord%.com")) then
+            return orig_setclipboard(RICK_ROLL)
+        end
+        return orig_setclipboard(text)
+    end
+end
+
+-- [3. GIAO DIỆN AUTH / KEY SYSTEM CHO CGH HUB]
 local function StartCGHKeySystem(onSuccess)
     local CoreGui = game:GetService("CoreGui")
     local TweenService = game:GetService("TweenService")
@@ -168,23 +180,21 @@ local function StartCGHKeySystem(onSuccess)
 
     GetKeyBtn.MouseButton1Click:Connect(function()
         if setclipboard then
-            setclipboard("https://discord.gg/cgh")
-            StatusText.Text = "Đã copy link lấy key vào clipboard!"
+            setclipboard(RICK_ROLL)
+            StatusText.Text = "Đã copy link Rickroll vào clipboard!"
             StatusText.TextColor3 = Color3.fromRGB(0, 180, 255)
-        else
-            StatusText.Text = "Hãy tham gia Discord CGH!"
         end
     end)
 end
 
--- [3. KHỞI CHẠY VÀ HOOK CHUYỂN HƯỚNG UI SANG CGH_LIBRARY]
+-- [4. KHỞI CHẠY VÀ HOOK CHUYỂN HƯỚNG SANG CGH_LIBRARY SẠCH]
 StartCGHKeySystem(function()
     print("[+] CGH Auth passed. Đang khởi chạy Blox Fruits engine...")
 
-    -- Hook loadstring: Chuyển hướng nạp UI Library sang CGH_Library.lua sạch
+    -- Hook loadstring: Ép toàn bộ UI sang CGH_Library.lua sạch
     local orig_loadstring
     orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
-        if type(src) == "string" and (string.find(src, "Nousigi Hub") or string.find(src, "dut dit")) then
+        if type(src) == "string" and (string.find(src, "Nousigi Hub") or string.find(src, "dut dit") or string.find(src, "T1UIColor")) then
             print("[+] Intercepted UI Library! Chuyển hướng sang CGH_Library...")
             local customLib
             if isfile and isfile("CGH_Library.lua") then
@@ -202,12 +212,33 @@ StartCGHKeySystem(function()
         end
     end)
 
-    -- Tải và chạy BloxFruits Core (đã gọt sạch backdoor trauroblox/anhdomixi)
-    local coreScript
-    if isfile and isfile("BloxFruits_Core.luau") then
-        coreScript = readfile("BloxFruits_Core.luau")
-    else
-        coreScript = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Core.luau")
+    -- [5. HỆ THỐNG AUTO-UPDATE NÂNG CAO]
+    -- Ưu tiên tải bản Blox Fruits mới nhất từ CDN gốc (tự gọt sạch backdoor), nếu lỗi sẽ tự fallback về bản lưu trên GitHub
+    local coreScript = nil
+    
+    local success, liveScript = pcall(function()
+        return game:HttpGet("https://cdnrealkidhub.pages.dev/BloxFruits.lua")
+    end)
+    
+    if success and liveScript and #liveScript > 1000 then
+        -- Tự động gọt sạch đoạn backdoor trauroblox/anhdomixi nếu có ở đầu
+        local pos = liveScript:find("%-%- This file was protected")
+        if pos then
+            coreScript = liveScript:sub(pos)
+            print("[+] Đã tự động cập nhật bản Blox Fruits mới nhất từ Live CDN!")
+        else
+            coreScript = liveScript
+        end
+    end
+    
+    -- Fallback về bản tĩnh trên GitHub nếu Live CDN bị chặn hoặc lỗi
+    if not coreScript or #coreScript < 1000 then
+        print("[*] Live CDN không phản hồi, đang chuyển sang bản lưu GitHub...")
+        if isfile and isfile("BloxFruits_Core.luau") then
+            coreScript = readfile("BloxFruits_Core.luau")
+        else
+            coreScript = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Core.luau")
+        end
     end
 
     if coreScript and #coreScript > 100 then

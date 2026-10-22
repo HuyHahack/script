@@ -1497,7 +1497,7 @@ function Library:CreateWindow(Setting)
                     if Setting.Title and Setting.Title:find("Discord") then
                         Setting.Callback = function()
                             if setclipboard then
-                                setclipboard("https://discord.gg/cgh")
+                                setclipboard("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
                             end
                         end
                     end
