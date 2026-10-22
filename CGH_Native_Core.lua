@@ -184,8 +184,8 @@ local function InitCGHInterface()
     local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Library.lua"))()
     
     local Window = Library:CreateWindow({
-        Title = "CGH Hub — Blox Fruits (Native Core)",
-        Subtitle = "Bản mã nguồn sạch 100% — Zero Luraph",
+        Title = "CGH Hub",
+        Subtitle = "Blox Fruits (Native Core)",
         Image = "rbxassetid://cgh_logo"
     })
 
@@ -193,7 +193,7 @@ local function InitCGHInterface()
     local TabMain = Window:AddTab("Auto Farm")
     local SecFarm = TabMain:AddLeftGroupbox("Chiến Đấu & Farm")
 
-    SecFarm:AddToggle({
+    SecFarm:AddToggle("FastAttackToggle", {
         Text = "Fast Attack (Tốc Đánh Cực Nhanh)",
         Default = false,
         Callback = function(val)
@@ -201,7 +201,7 @@ local function InitCGHInterface()
         end
     })
 
-    SecFarm:AddToggle({
+    SecFarm:AddToggle("AutoBusoToggle", {
         Text = "Auto Bật Buso Haki (Aura)",
         Default = false,
         Callback = function(val)
@@ -209,7 +209,7 @@ local function InitCGHInterface()
         end
     })
 
-    SecFarm:AddDropdown({
+    SecFarm:AddDropdown("WeaponDropdown", {
         Text = "Vũ Khí Farm",
         Values = {"Melee", "Sword"},
         Default = "Melee",
@@ -232,7 +232,7 @@ local function InitCGHInterface()
     local TabMisc = Window:AddTab("Tiện Ích")
     local SecChest = TabMisc:AddLeftGroupbox("Nhặt Tiền & Teleport")
 
-    SecChest:AddToggle({
+    SecChest:AddToggle("AutoChestToggle", {
         Text = "Auto Nhặt Rương (Beli Chest)",
         Default = false,
         Callback = function(val)
@@ -241,7 +241,7 @@ local function InitCGHInterface()
         end
     })
 
-    SecChest:AddToggle({
+    SecChest:AddToggle("NoclipToggle", {
         Text = "Noclip Xuyên Tường",
         Default = false,
         Callback = function(val)

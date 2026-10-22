@@ -1345,6 +1345,8 @@ function Library:CreateWindow(Setting)
 			end)
 			local sectionFunction = {}
 			function sectionFunction:AddToggle(idk,Setting)
+				if type(idk) == "table" and Setting == nil then Setting = idk idk = "Toggle" end
+				Setting = Setting or {}
 				local Title = tostring(Setting.Text or Setting.Title) or ""
 				local Desc = Setting.Desc or Setting.Description
 				local Default = Setting.Default
@@ -2199,6 +2201,8 @@ function Library:CreateWindow(Setting)
             end
             
 			function sectionFunction:AddDropdown(idk, Setting)
+				if type(idk) == "table" and Setting == nil then Setting = idk idk = "Dropdown" end
+				Setting = Setting or {}
 				local Title = tostring(Setting.Text or Setting.Title) or ""
 				local List = Setting.Values
 				local Search = Setting.Search or false
