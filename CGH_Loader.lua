@@ -177,34 +177,22 @@ local function StartCGHKeySystem(onSuccess)
     end)
 end
 
--- [3. KHỞI CHẠY VÀ HOOK THAY BRAND / LOGO GỐC]
+-- [3. KHỞI CHẠY VÀ HOOK CHUYỂN HƯỚNG UI SANG CGH_LIBRARY]
 StartCGHKeySystem(function()
     print("[+] CGH Auth passed. Đang khởi chạy Blox Fruits engine...")
 
-    -- Hook loadstring để ép logo và title CGH
+    -- Hook loadstring: Chuyển hướng nạp UI Library sang CGH_Library.lua sạch
     local orig_loadstring
     orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
-        if type(src) == "string" and string.find(src, "Nousigi Hub") then
-            -- Đổi tên Brand
-            src = src:gsub("Nousigi Hub", "CGH Hub")
-            src = src:gsub("Nousigi", "CGH")
-
-            -- Override CreateWindow TRƯỚC return Library để không lỗi cú pháp
-            local injectOverride = [[
-                local _orig_CreateWindow = Library.CreateWindow
-                function Library:CreateWindow(Setting)
-                    Setting = Setting or {}
-                    Setting.Title = "CGH Hub"
-                    Setting.Desc = "Blox Fruits - CGH Team"
-                    local customLogo = (isfile and isfile("cgh_logo.png") and getcustomasset and getcustomasset("cgh_logo.png"))
-                    Setting.Image = customLogo or "rbxassetid://96220014754961"
-                    getgenv().UIColor["Logo Image"] = Setting.Image
-                    getgenv().UIColor["Border Color"] = Color3.fromRGB(220, 20, 40)
-                    getgenv().UIColor["Title Text Color"] = Color3.fromRGB(255, 215, 0)
-                    return _orig_CreateWindow(self, Setting)
-                end
-            ]]
-            src = src:gsub("return Library", injectOverride .. "\nreturn Library")
+        if type(src) == "string" and (string.find(src, "Nousigi Hub") or string.find(src, "dut dit")) then
+            print("[+] Intercepted UI Library! Chuyển hướng sang CGH_Library...")
+            local customLib
+            if isfile and isfile("CGH_Library.lua") then
+                customLib = readfile("CGH_Library.lua")
+            else
+                customLib = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Library.lua")
+            end
+            return orig_loadstring(customLib)
         end
         
         if chunkname ~= nil then
