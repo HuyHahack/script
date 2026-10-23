@@ -1,8 +1,8 @@
 --[[
     ========================================================================
-                      CGH HUB — BLOX FRUITS NATIVE CORE v2.0
+                      CGH HUB — BLOX FRUITS NATIVE CORE v3.0
                50+ Tính năng nguyên bản bóc tách từ Nousigi/RealKid Hub
-                      100% Mã nguồn sạch — Zero Luraph VM
+                      100% Mã nguồn sạch — Zero Luraph VM (Không đơ game)
     ========================================================================
 --]]
 
@@ -18,6 +18,7 @@ local HttpService = game:GetService("HttpService")
 local LocalPlayer = Players.LocalPlayer
 local Remotes = ReplicatedStorage:WaitForChild("Remotes")
 local CommF = Remotes:WaitForChild("CommF_")
+local xisdRemote = Remotes:FindFirstChild("xisd")
 
 -- ========================================================================
 -- 1. BẢNG CẤU HÌNH & TRẠNG THÁI TÍNH NĂNG (STATE CONFIG)
@@ -39,14 +40,14 @@ local _CGH = {
     FastAttack = false,
     FastAttackPlayers = false,
     BringMobs = false,
-    BringMobMax = 5,
+    BringMobMax = 8,
     BringMobMode = "Behind",
     AutoTurnBuso = false,
     AutoTurnKen = false,
     AutoTurnRaceV3 = false,
     AutoTurnRaceV4 = false,
     AutoSpinPosition = false,
-    AntiAFK = false,
+    AntiAFK = true,
     AutoRemoveFog = false,
     AutoLowCPU = false,
     TweenSpeed = 300,
@@ -62,7 +63,7 @@ local _CGH = {
 
     -- Teleport & Travel
     AutoTravel = false,
-    SelectedIsland = "Starter Island",
+    SelectedIsland = "Starter Island (Pirate)",
 
     -- ESP
     EspPlayers = false,
@@ -98,7 +99,7 @@ local IslandPositions = {
 }
 
 -- ========================================================================
--- 3. CƠ CHẾ DI CHUYỂN, NOCLIP & GOM QUÁI (TWEEN & BRING MOBS ENGINE)
+-- 3. CƠ CHẾ DI CHUYỂN, NOCLIP & TWEEN
 -- ========================================================================
 local function CancelTween()
     if _CGH.CurrentTween then
@@ -139,40 +140,14 @@ RunService.Stepped:Connect(function()
     end
 end)
 
-local function BringMobsToPlayer()
-    if not _CGH.BringMobs then return end
-    local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local root = char.HumanoidRootPart
-    local enemies = workspace:FindFirstChild("Enemies")
-    if not enemies then return end
-
-    local count = 0
-    local maxBring = tonumber(_CGH.BringMobMax) or 5
-    for _, enemy in ipairs(enemies:GetChildren()) do
-        local hum = enemy:FindFirstChild("Humanoid")
-        local eRoot = enemy:FindFirstChild("HumanoidRootPart")
-        if hum and hum.Health > 0 and eRoot then
-            local dist = (eRoot.Position - root.Position).Magnitude
-            if dist < 250 then
-                count = count + 1
-                eRoot.CanCollide = false
-                hum.WalkSpeed = 0
-                
-                local offset = CFrame.new(0, 0, -5)
-                if _CGH.BringMobMode == "Above" then offset = CFrame.new(0, 10, 0)
-                elseif _CGH.BringMobMode == "Behind" then offset = CFrame.new(0, 0, 5) end
-                
-                eRoot.CFrame = root.CFrame * offset
-                if count >= maxBring then break end
-            end
-        end
-    end
-end
-
 -- ========================================================================
--- 4. CƠ CHẾ FAST ATTACK & COMBAT (ĐÁNH NHANH & VŨ KHÍ)
+-- 4. CƠ CHẾ COMBAT FRAMEWORK & FAST ATTACK NGUYÊN BẢN (KHÔNG FAKE CLICK)
 -- ========================================================================
+local CombatFramework = nil
+pcall(function()
+    CombatFramework = require(LocalPlayer.PlayerScripts:WaitForChild("CombatFramework"))
+end)
+
 local function EquipWeapon(typeChoice)
     local char = LocalPlayer.Character
     local backpack = LocalPlayer:FindFirstChild("Backpack")
@@ -198,35 +173,28 @@ local function EquipWeapon(typeChoice)
     return char:FindFirstChildOfClass("Tool")
 end
 
+-- THREAD FAST ATTACK ĐỘC LẬP TẦN SỐ CAO (HIGH FREQUENCY THREAD)
 task.spawn(function()
     while true do
-        task.wait(0.08)
+        task.wait(0.015)
         if _CGH.FastAttack or _CGH.AutoFarm then
             local char = LocalPlayer.Character
             if char and char:FindFirstChild("HumanoidRootPart") then
-                local rootPos = char.HumanoidRootPart.Position
                 local currentTool = char:FindFirstChildOfClass("Tool") or EquipWeapon(_CGH.WeaponType)
-                
-                local enemies = workspace:FindFirstChild("Enemies")
-                if enemies then
-                    for _, enemy in ipairs(enemies:GetChildren()) do
-                        local eHum = enemy:FindFirstChild("Humanoid")
-                        local eRoot = enemy:FindFirstChild("HumanoidRootPart")
-                        if eHum and eHum.Health > 0 and eRoot then
-                            if (eRoot.Position - rootPos).Magnitude <= 65 then
-                                if currentTool then
-                                    currentTool:Activate()
-                                end
-                                VirtualUser:CaptureController()
-                                VirtualUser:ClickButton1(Vector2.new(600, 500))
-                                break
+                if currentTool then
+                    pcall(function()
+                        if CombatFramework and CombatFramework.activeController then
+                            local ac = CombatFramework.activeController
+                            ac.attackInterval = 0
+                            ac.hitboxMagnitude = 60
+                            if ac.attack then
+                                ac:attack()
                             end
                         end
-                    end
-                end
-
-                if _CGH.BringMobs then
-                    pcall(BringMobsToPlayer)
+                    end)
+                    pcall(function()
+                        currentTool:Activate()
+                    end)
                 end
             end
         end
@@ -234,11 +202,105 @@ task.spawn(function()
 end)
 
 -- ========================================================================
--- 5. CƠ CHẾ HAKI, RACE & ANTI AFK (BUSO, KEN, V3/V4, ANTI AFK)
+-- 5. CƠ CHẾ BRING MOBS CHUẨN XÁC THEO LOGIC REMOTE xisd MAGNET & HITBOX
+-- ========================================================================
+local function AuthenticBringMobs()
+    if not _CGH.BringMobs and not _CGH.AutoFarm then return end
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local root = char.HumanoidRootPart
+    local enemies = workspace:FindFirstChild("Enemies")
+    if not enemies then return end
+
+    -- Gọi Remote Magnet chuẩn xác của Blox Fruits đã bóc tách từ log
+    pcall(function()
+        if xisdRemote then
+            xisdRemote:InvokeServer("FX", "Magnet")
+        end
+    end)
+
+    local count = 0
+    local maxBring = tonumber(_CGH.BringMobMax) or 8
+    local rootPos = root.Position
+
+    for _, enemy in ipairs(enemies:GetChildren()) do
+        local hum = enemy:FindFirstChild("Humanoid")
+        local eRoot = enemy:FindFirstChild("HumanoidRootPart")
+        if hum and hum.Health > 0 and eRoot then
+            local dist = (eRoot.Position - rootPos).Magnitude
+            if dist < 320 then
+                count = count + 1
+                
+                -- Khóa physics & phóng to hitbox quái (chuẩn mechanic Blox Fruits)
+                eRoot.CanCollide = false
+                eRoot.Size = Vector3.new(60, 60, 60)
+                hum:ChangeState(11) -- Physics/Stun state không cho quái đi lệch
+                pcall(sethiddenproperty, eRoot, "NetworkIsSleeping", true)
+
+                local offset = CFrame.new(0, 0, -4)
+                if _CGH.BringMobMode == "Above" then
+                    offset = CFrame.new(0, 8, 0)
+                elseif _CGH.BringMobMode == "Behind" then
+                    offset = CFrame.new(0, 0, 4)
+                end
+
+                eRoot.CFrame = root.CFrame * offset
+                if count >= maxBring then break end
+            end
+        end
+    end
+end
+
+-- THREAD BRING MOBS ĐỘC LẬP
+task.spawn(function()
+    while true do
+        task.wait(0.15)
+        if _CGH.BringMobs or _CGH.AutoFarm then
+            pcall(AuthenticBringMobs)
+        end
+    end
+end)
+
+-- ========================================================================
+-- 6. THREAD AUTO FARM QUEST & FARMING LOGIC
 -- ========================================================================
 task.spawn(function()
     while true do
-        task.wait(2)
+        task.wait(0.2)
+        if _CGH.AutoFarm then
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("HumanoidRootPart") then
+                local root = char.HumanoidRootPart
+                local enemies = workspace:FindFirstChild("Enemies")
+                local targetMob = nil
+                
+                if enemies then
+                    for _, enemy in ipairs(enemies:GetChildren()) do
+                        local eHum = enemy:FindFirstChild("Humanoid")
+                        local eRoot = enemy:FindFirstChild("HumanoidRootPart")
+                        if eHum and eHum.Health > 0 and eRoot then
+                            targetMob = enemy
+                            break
+                        end
+                    end
+                end
+
+                if targetMob and targetMob:FindFirstChild("HumanoidRootPart") then
+                    local mobRoot = targetMob.HumanoidRootPart
+                    local farmCF = mobRoot.CFrame * CFrame.new(0, _CGH.FarmHeight, 0)
+                    TweenTo(farmCF, _CGH.TweenSpeed)
+                end
+            end
+        end
+    end
+end)
+
+-- ========================================================================
+-- 7. CƠ CHẾ HAKI, RACE & ANTI AFK
+-- ========================================================================
+task.spawn(function()
+    while true do
+        task.wait(1.5)
         local char = LocalPlayer.Character
         if char then
             -- Auto Buso Haki (Aura)
@@ -284,11 +346,11 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 -- ========================================================================
--- 6. CƠ CHẾ AUTO STATS (TỰ ĐỘNG CỘNG ĐIỂM)
+-- 8. CƠ CHẾ AUTO STATS (TỰ ĐỘNG CỘNG ĐIỂM)
 -- ========================================================================
 task.spawn(function()
     while true do
-        task.wait(1)
+        task.wait(0.5)
         local pts = _CGH.StatsValue
         if _CGH.AutoMelee then pcall(function() CommF:InvokeServer("AddPoint", "Melee", pts) end) end
         if _CGH.AutoDefense then pcall(function() CommF:InvokeServer("AddPoint", "Defense", pts) end) end
@@ -299,7 +361,7 @@ task.spawn(function()
 end)
 
 -- ========================================================================
--- 7. CƠ CHẾ AUTO NHẶT RƯƠNG (AUTO CHEST BELI)
+-- 9. CƠ CHẾ AUTO NHẶT RƯƠNG (AUTO CHEST BELI)
 -- ========================================================================
 task.spawn(function()
     while true do
@@ -321,16 +383,25 @@ task.spawn(function()
 end)
 
 -- ========================================================================
--- 8. CƠ CHẾ ESP (CHESTS, FRUITS, PLAYERS)
+-- 10. CƠ CHẾ ESP HOÀN CHỈNH (KHÔNG LỖI VECTOR, TỰ DỌN DẸP KHI TẮT)
 -- ========================================================================
-local function CreateESPBox(part, text, color)
+local function ClearESP(tag)
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v.Name == "CGH_ESP" and (not tag or v:GetAttribute("ESPTag") == tag) then
+            v:Destroy()
+        end
+    end
+end
+
+local function CreateESPBox(part, text, color, tag)
     if not part or part:FindFirstChild("CGH_ESP") then return end
     local bbg = Instance.new("BillboardGui")
     bbg.Name = "CGH_ESP"
     bbg.Adornee = part
-    bbg.Size = UDim2.new(0, 100, 0, 30)
-    bbg.StudsOffset = Vector2.new(0, 2)
+    bbg.Size = UDim2.new(0, 120, 0, 30)
+    bbg.StudsOffset = Vector3.new(0, 3, 0) -- DÙNG Vector3 CHUẨN XÁC 100%, KHÔNG DÙNG Vector2
     bbg.AlwaysOnTop = true
+    bbg:SetAttribute("ESPTag", tag or "General")
     
     local lbl = Instance.new("TextLabel")
     lbl.Parent = bbg
@@ -346,28 +417,30 @@ end
 
 task.spawn(function()
     while true do
-        task.wait(3)
+        task.wait(2)
         if _CGH.EspChests then
             for _, obj in ipairs(workspace:GetDescendants()) do
                 if obj.Name:find("Chest") and obj:IsA("BasePart") then
-                    CreateESPBox(obj, "[Rương Beli]", Color3.fromRGB(255, 215, 0))
+                    CreateESPBox(obj, "[Rương Beli]", Color3.fromRGB(255, 215, 0), "Chest")
                 end
             end
         end
+
         if _CGH.EspFruits then
             for _, obj in ipairs(workspace:GetChildren()) do
                 if obj:IsA("Tool") and obj.Name:find("Fruit") then
                     local handle = obj:FindFirstChild("Handle") or obj:FindFirstChildOfClass("BasePart")
                     if handle then
-                        CreateESPBox(handle, "[Trái Ác Quỷ] " .. obj.Name, Color3.fromRGB(0, 255, 127))
+                        CreateESPBox(handle, "[Trái Ác Quỷ] " .. obj.Name, Color3.fromRGB(0, 255, 127), "Fruit")
                     end
                 end
             end
         end
+
         if _CGH.EspPlayers then
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") then
-                    CreateESPBox(p.Character.Head, p.DisplayName .. " (@" .. p.Name .. ")", Color3.fromRGB(255, 60, 60))
+                    CreateESPBox(p.Character.Head, p.DisplayName .. " (@" .. p.Name .. ")", Color3.fromRGB(255, 60, 60), "Player")
                 end
             end
         end
@@ -375,10 +448,15 @@ task.spawn(function()
 end)
 
 -- ========================================================================
--- 9. KHỞI TẠO GIAO DIỆN CGH LIBRARY (ĐÚNG 100% TÊN 50+ TÍNH NĂNG GỐC)
+-- 11. KHỞI TẠO GIAO DIỆN CGH LIBRARY
 -- ========================================================================
 local function StartCGHHub()
-    local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Library.lua"))()
+    local Library = nil
+    if isfile and isfile("CGH_Library.lua") then
+        Library = loadstring(readfile("CGH_Library.lua"))()
+    else
+        Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Library.lua"))()
+    end
 
     local Window = Library:CreateWindow({
         Title = "CGH Hub",
@@ -470,7 +548,7 @@ local function StartCGHHub()
     SecCombat:AddDropdown("Dropdown_Bring_Mob_Max", {
         Text = "Bring Mob Max",
         Values = {"3", "5", "8", "10", "All"},
-        Default = "5",
+        Default = "8",
         Callback = function(v) _CGH.BringMobMax = (v == "All" and 99 or tonumber(v)) end
     })
 
@@ -716,19 +794,28 @@ local function StartCGHHub()
     SecEsp:AddToggle("Toggle_Esp_Players", {
         Text = "Esp Players",
         Default = false,
-        Callback = function(v) _CGH.EspPlayers = v end
+        Callback = function(v)
+            _CGH.EspPlayers = v
+            if not v then ClearESP("Player") end
+        end
     })
 
     SecEsp:AddToggle("Toggle_Esp_Chests", {
         Text = "Esp Chests",
         Default = false,
-        Callback = function(v) _CGH.EspChests = v end
+        Callback = function(v)
+            _CGH.EspChests = v
+            if not v then ClearESP("Chest") end
+        end
     })
 
     SecEsp:AddToggle("Toggle_Esp_Fruits", {
         Text = "Esp Fruits",
         Default = false,
-        Callback = function(v) _CGH.EspFruits = v end
+        Callback = function(v)
+            _CGH.EspFruits = v
+            if not v then ClearESP("Fruit") end
+        end
     })
 
     -- --------------------------------------------------------------------
