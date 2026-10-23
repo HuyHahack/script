@@ -14,21 +14,7 @@ pcall(function()
     end
 end)
 
--- [2. GHI ĐÈ TOKEN BYPASS AUTH CHO REALKID]
-pcall(function()
-    local key = "TRAU_0E32B39DDBA01BDDCD7DF94F852880B6D64C4B9D0563EAB0"
-    local save = "TRAU_5ED2C42BACED0ADB86FC42D48ECC842CD6F19F9E52F2C525"
-    if writefile then
-        writefile("RealKid_Key_" .. tostring(game.PlaceId) .. ".txt", key)
-        writefile("RealKid_Key_2753915549.txt", key)
-        writefile("RealKid_Key_4442272183.txt", key)
-        writefile("RealKid_Key_7449423635.txt", key)
-        writefile("TrauHub_Save.txt", save)
-        writefile("CGH_Key.txt", "CGH_AUTHENTICATED")
-    end
-end)
-
--- [3. HOOK SETCLIPBOARD: MỌI LINK DISCORD ĐỀU THÀNH RICK ROLL]
+-- [2. HOOK SETCLIPBOARD: MỌI LINK DISCORD ĐỀU THÀNH RICK ROLL]
 local RICK_ROLL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 if setclipboard then
     local orig_setclipboard = setclipboard
@@ -40,10 +26,10 @@ if setclipboard then
     end
 end
 
--- [4. HOOK LOADSTRING: ÉP TOÀN BỘ UI SANG CGH_LIBRARY SẠCH]
+-- [3. HOOK LOADSTRING: ÉP TOÀN BỘ UI SANG CGH_LIBRARY SẠCH]
 local orig_loadstring
 orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
-    if type(src) == "string" and (string.find(src, "Nousigi Hub") or string.find(src, "dut dit") or string.find(src, "T1UIColor")) then
+    if type(src) == "string" and (string.find(src, "Nousigi Hub") or string.find(src, "dut dit") or string.find(src, "T1UIColor") or string.find(src, "RealKid")) then
         print("[+] Intercepted UI Library! Chuyển hướng sang CGH_Library...")
         local customLib
         if isfile and isfile("CGH_Library.lua") then
@@ -61,36 +47,17 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
     end
 end)
 
--- [5. HỆ THỐNG AUTO-UPDATE VÀ KÍCH HOẠT LÕI REALKID]
+-- [4. TẢI VÀ KÍCH HOẠT LÕI BLOX FRUITS (BỎ QUA HOÀN TOÀN TẦNG AUTH CHECK)]
+print("[+] CGH Hub Blox Fruits: Đang kích hoạt lõi game...")
+
 local coreScript = nil
-
--- Ưu tiên tải bản Blox Fruits mới nhất từ CDN gốc (tự gọt sạch backdoor), nếu lỗi sẽ tự fallback về bản lưu trên GitHub
-local success, liveScript = pcall(function()
-    return game:HttpGet("https://cdnrealkidhub.pages.dev/BloxFruits.lua")
-end)
-
-if success and liveScript and #liveScript > 1000 then
-    -- Tự động gọt sạch đoạn backdoor trauroblox/anhdomixi nếu có ở đầu
-    local pos = liveScript:find("%-%- This file was protected")
-    if pos then
-        coreScript = liveScript:sub(pos)
-        print("[+] Đã tự động cập nhật bản Blox Fruits mới nhất từ Live CDN!")
-    else
-        coreScript = liveScript
-    end
+if isfile and isfile("BloxFruits_Core.luau") then
+    coreScript = readfile("BloxFruits_Core.luau")
+else
+    coreScript = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Core.luau")
 end
 
--- Fallback về bản tĩnh trên GitHub nếu Live CDN bị chặn hoặc lỗi
-if not coreScript or #coreScript < 1000 then
-    print("[*] Live CDN không phản hồi, đang chuyển sang bản lưu GitHub...")
-    if isfile and isfile("BloxFruits_Core.luau") then
-        coreScript = readfile("BloxFruits_Core.luau")
-    else
-        coreScript = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Core.luau")
-    end
-end
-
-if coreScript and #coreScript > 100 then
+if coreScript and #coreScript > 1000 then
     local fn, err = loadstring(coreScript)
     if fn then
         fn()
