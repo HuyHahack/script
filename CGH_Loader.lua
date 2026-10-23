@@ -89,16 +89,27 @@ task.spawn(function()
     end
 end)
 
--- [4. HOOK REQUEST: BẢO VỆ & PHÂN LOẠI ENDPOINT CHUẨN XÁC]
+-- [4. HOOK REQUEST: BẢO VỆ & PHÂN LOẠI ENDPOINT CHUẨN XÁC (CHỈ HOOK 1 LẦN, CHỐNG LẶP VÔ HẠN)]
 local AUTH_PAYLOAD = 'loadstring(game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua"))()'
-local function hookReq(reqFunc)
-    if not reqFunc or not hookfunction then return reqFunc end
+local req_hooked = false
+
+local function setupReqHook()
+    if req_hooked or not hookfunction then return end
+    local primaryReq = request or http_request or (syn and syn.request) or (http and http.request)
+    if not primaryReq then return end
+    req_hooked = true
+    
+    local in_req = false
     local orig_req
-    orig_req = hookfunction(reqFunc, function(options)
+    orig_req = hookfunction(primaryReq, function(options)
+        if in_req then return orig_req(options) end
+        in_req = true
+        
         if type(options) == "table" and type(options.Url) == "string" then
             local url = options.Url:lower()
             -- Endpoint xác thực key: trả về payload nạp engine
             if url:find("trungdao2k4") or (options.Body and tostring(options.Body):find("auth")) then
+                in_req = false
                 return {
                     Success = true,
                     success = true,
@@ -111,6 +122,7 @@ local function hookReq(reqFunc)
                 }
             -- Endpoint telemetry / tracker trái / boss: trả về JSON hợp lệ để không lỗi JSONDecode
             elseif url:find("realkidapi") or url:find("workers.dev") then
+                in_req = false
                 return {
                     Success = true,
                     success = true,
@@ -123,15 +135,14 @@ local function hookReq(reqFunc)
                 }
             end
         end
-        return orig_req(options)
+        
+        local res = orig_req(options)
+        in_req = false
+        return res
     end)
-    return orig_req
 end
 
-pcall(function() if request then hookReq(request) end end)
-pcall(function() if http_request then hookReq(http_request) end end)
-pcall(function() if syn and syn.request then hookReq(syn.request) end end)
-pcall(function() if http and http.request then hookReq(http.request) end end)
+pcall(setupReqHook)
 
 -- [5. HOOK SETCLIPBOARD: MỌI LINK DISCORD ĐỀU THÀNH RICK ROLL]
 local RICK_ROLL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
@@ -145,10 +156,20 @@ if setclipboard then
     end
 end
 
--- [6. HOOK LOADSTRING: ÉP TOÀN BỘ UI SANG CGH_LIBRARY SẠCH]
+-- [6. HOOK LOADSTRING: ÉP TOÀN BỘ UI SANG CGH_LIBRARY SẠCH (CÓ RECURSION GUARD CHỐNG ĐƠ)]
+local in_loadstring = false
 local orig_loadstring
 orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
+    if in_loadstring then
+        if chunkname ~= nil then
+            return orig_loadstring(src, chunkname, ...)
+        else
+            return orig_loadstring(src)
+        end
+    end
+
     if type(src) == "string" and (string.find(src, "Nousigi Hub") or string.find(src, "dut dit") or string.find(src, "T1UIColor") or string.find(src, "RealKid")) then
+        in_loadstring = true
         log("[+] Intercepted UI Library! Chuyển hướng sang CGH_Library...")
         local customLib
         if isfile and isfile("CGH_Library.lua") then
@@ -156,7 +177,9 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
         else
             customLib = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Library.lua?t=" .. tostring(os.time()))
         end
-        return orig_loadstring(customLib)
+        local res = orig_loadstring(customLib)
+        in_loadstring = false
+        return res
     end
     
     if chunkname ~= nil then
@@ -205,15 +228,17 @@ end
 if coreScript and #coreScript > 1000 then
     local fn, err = loadstring(coreScript)
     if fn then
-        log("[+] Compile mã nguồn Blox Fruits thành công! Đang thực thi...")
-        local success, runErr = xpcall(fn, function(e)
-            return tostring(e) .. "\n" .. debug.traceback()
+        log("[+] Compile mã nguồn Blox Fruits thành công! Đang kích hoạt tiến trình...")
+        task.spawn(function()
+            local success, runErr = xpcall(fn, function(e)
+                return tostring(e) .. "\n" .. debug.traceback()
+            end)
+            if success then
+                log("[+] CGH Hub Blox Fruits đã kích hoạt hoàn tất!")
+            else
+                log("[!] LỖI RUNTIME BLOX FRUITS: " .. tostring(runErr))
+            end
         end)
-        if success then
-            log("[+] CGH Hub Blox Fruits đã kích hoạt hoàn tất!")
-        else
-            log("[!] LỖI RUNTIME BLOX FRUITS: " .. tostring(runErr))
-        end
     else
         log("[!] LỖI COMPILE BLOX FRUITS: " .. tostring(err))
     end
