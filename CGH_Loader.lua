@@ -116,7 +116,7 @@ if hookmetamethod then
 end
 
 -- [6. HOOK TOÀN BỘ CÁC HÀM REQUEST: AUTO-PASS KEY AUTH & FIX DEAD SERVER]
-local AUTH_JSON = '{"success":true,"status":"success","message":"Key hợp lệ","msg":"Key hợp lệ","code":200,"key":"TRAU_D681832834B3C47DC3B817046FDEAFAF32E0911348B00509","data":"loadstring(game:HttpGet(\\"https://cdnrealkidhub.pages.dev/anhdomixi.lua\\"))()","script":"loadstring(game:HttpGet(\\"https://cdnrealkidhub.pages.dev/anhdomixi.lua\\"))()"}'
+local AUTH_JSON = '{"success":true,"status":"success","message":"Key hợp lệ","msg":"Key hợp lệ","code":200,"status_code":200,"valid":true,"whitelist":true,"key":"TRAU_D681832834B3C47DC3B817046FDEAFAF32E0911348B00509","data":"loadstring(game:HttpGet(\\"https://cdnrealkidhub.pages.dev/anhdomixi.lua\\"))()","script":"loadstring(game:HttpGet(\\"https://cdnrealkidhub.pages.dev/anhdomixi.lua\\"))()"}'
 
 local function handleRequestMock(options)
     if type(options) == "table" then
@@ -135,8 +135,18 @@ local function handleRequestMock(options)
                     status = 200,
                     StatusMessage = "OK",
                     status_message = "OK",
-                    Headers = { ["content-type"] = "application/json" },
-                    headers = { ["content-type"] = "application/json" },
+                    Headers = {
+                        ["content-type"] = "application/json",
+                        ["Content-Type"] = "application/json",
+                        ["server"] = "cloudflare",
+                        ["connection"] = "keep-alive"
+                    },
+                    headers = {
+                        ["content-type"] = "application/json",
+                        ["Content-Type"] = "application/json",
+                        ["server"] = "cloudflare",
+                        ["connection"] = "keep-alive"
+                    },
                     Body = AUTH_JSON,
                     body = AUTH_JSON
                 }
@@ -152,8 +162,14 @@ local function handleRequestMock(options)
                     status = 200,
                     StatusMessage = "OK",
                     status_message = "OK",
-                    Headers = { ["content-type"] = "application/json" },
-                    headers = { ["content-type"] = "application/json" },
+                    Headers = {
+                        ["content-type"] = "application/json",
+                        ["Content-Type"] = "application/json"
+                    },
+                    headers = {
+                        ["content-type"] = "application/json",
+                        ["Content-Type"] = "application/json"
+                    },
                     Body = okJson,
                     body = okJson
                 }
@@ -204,10 +220,10 @@ pcall(function()
                     __index = function(t, k)
                         if k == "success" or k == "valid" or k == "whitelist" then return true end
                         if k == "status" then return "success" end
-                        if k == "code" then return 200 end
+                        if k == "code" or k == "status_code" or k == "StatusCode" then return 200 end
                         if k == "key" then return "TRAU_D681832834B3C47DC3B817046FDEAFAF32E0911348B00509" end
-                        if k == "data" or k == "script" then return 'loadstring(game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua"))()' end
-                        return rawget(t, k)
+                        if k == "data" or k == "script" or k == "url" then return 'loadstring(game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua"))()' end
+                        return true
                     end
                 })
             else
@@ -216,6 +232,9 @@ pcall(function()
                     status = "success",
                     message = "Key hợp lệ",
                     code = 200,
+                    status_code = 200,
+                    valid = true,
+                    whitelist = true,
                     key = "TRAU_D681832834B3C47DC3B817046FDEAFAF32E0911348B00509",
                     data = 'loadstring(game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua"))()',
                     script = 'loadstring(game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua"))()'
@@ -225,7 +244,7 @@ pcall(function()
     end
 end)
 
--- [8. HOOK LOADSTRING: ÉP TOÀN BỘ UI SANG CGH_LIBRARY SẠCH]
+-- [8. HOOK LOADSTRING: ÉP TOÀN BỘ UI SANG CGH_LIBRARY SẠCH & HỖ TRỢ EXECUTING AUTH]
 local in_loadstring = false
 local orig_loadstring
 orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
@@ -237,18 +256,34 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
         end
     end
 
-    if type(src) == "string" and (string.find(src, "Nousigi Hub") or string.find(src, "dut dit") or string.find(src, "T1UIColor")) then
-        in_loadstring = true
-        print("[+] Intercepted UI Library! Chuyển hướng sang CGH_Library...")
-        local customLib
-        if isfile and isfile("CGH_Library.lua") then
-            customLib = readfile("CGH_Library.lua")
-        else
-            customLib = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Library.lua?t=" .. tostring(os.time()))
+    if type(src) == "string" then
+        -- Chuyển hướng Nousigi UI sang CGH_Library
+        if string.find(src, "Nousigi Hub") or string.find(src, "dut dit") or string.find(src, "T1UIColor") then
+            in_loadstring = true
+            print("[+] Intercepted UI Library! Chuyển hướng sang CGH_Library...")
+            local customLib
+            if isfile and isfile("CGH_Library.lua") then
+                customLib = readfile("CGH_Library.lua")
+            else
+                customLib = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Library.lua?t=" .. tostring(os.time()))
+            end
+            local res = orig_loadstring(customLib)
+            in_loadstring = false
+            return res
+        -- Nếu RealKid gọi loadstring trực tiếp trên payload JSON auth
+        elseif string.find(src, '"action":"auth"') or string.find(src, '"status":"success"') or string.find(src, '"success":true') then
+            print("[+] RealKid loadstring(auth_response) intercepted! Chuyển sang thực thi Blox Fruits UI...")
+            in_loadstring = true
+            local scriptCode
+            if isfile and isfile("anhdomixi.lua") then
+                scriptCode = readfile("anhdomixi.lua")
+            else
+                scriptCode = game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua")
+            end
+            local res = orig_loadstring(scriptCode)
+            in_loadstring = false
+            return res
         end
-        local res = orig_loadstring(customLib)
-        in_loadstring = false
-        return res
     end
 
     if chunkname ~= nil then
@@ -258,62 +293,30 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
     end
 end)
 
--- [9. HỆ THỐNG DIỆT TRIỆT ĐỂ BLUE REALKID AUTH POPUP (CHỐNG TREO MÀN HÌNH)]
-local function killBlueAuth(gui)
-    if not gui or not gui:IsA("ScreenGui") then return end
-    if gui.Name == "CGH_Auth_GUI" or gui.Name == "CGH Hub GUI" or gui.Name == "Nousigi Hub GUI" then return end
+-- [9. TỰ ĐỘNG BẤM 'KIỂM TRA' TRÊN KHUNG BLUE REALKID]
+task.spawn(function()
+    local coreGui = game:GetService("CoreGui")
+    local playerGui = game:GetService("Players").LocalPlayer and game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
 
-    local shouldKill = false
-    local lowerName = gui.Name:lower()
-    if lowerName:find("realkid") then
-        shouldKill = true
-    else
-        for _, desc in ipairs(gui:GetDescendants()) do
-            if desc:IsA("TextLabel") or desc:IsA("TextButton") then
-                local txt = desc.Text:lower()
-                if txt:find("xin chào") or txt:find("realkid hub") or txt:find("gián đoạn") then
-                    shouldKill = true
-                    break
+    for _ = 1, 60 do
+        task.wait(0.25)
+        for _, parent in ipairs({coreGui, playerGui}) do
+            if parent then
+                for _, obj in ipairs(parent:GetDescendants()) do
+                    if obj:IsA("TextButton") and (obj.Text:find("KIỂM TRA") or obj.Text:find("Kiem Tra")) then
+                        print("[+] Phát hiện nút KIỂM TRA! Tự động nhấn để gửi Auth...")
+                        if firesignal then
+                            firesignal(obj.MouseButton1Click)
+                        elseif getconnections then
+                            for _, c in ipairs(getconnections(obj.MouseButton1Click)) do
+                                c:Fire()
+                            end
+                        end
+                        return
+                    end
                 end
             end
         end
-    end
-
-    if shouldKill then
-        pcall(function()
-            gui.Enabled = false
-            gui:Destroy()
-        end)
-    end
-end
-
-pcall(function()
-    local cg = game:GetService("CoreGui")
-    cg.ChildAdded:Connect(killBlueAuth)
-    for _, g in ipairs(cg:GetChildren()) do killBlueAuth(g) end
-end)
-
-pcall(function()
-    local lp = game:GetService("Players").LocalPlayer
-    if lp then
-        local pg = lp:FindFirstChild("PlayerGui") or lp:WaitForChild("PlayerGui", 5)
-        if pg then
-            pg.ChildAdded:Connect(killBlueAuth)
-            for _, g in ipairs(pg:GetChildren()) do killBlueAuth(g) end
-        end
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.3) do
-        pcall(function()
-            local cg = game:GetService("CoreGui")
-            for _, g in ipairs(cg:GetChildren()) do killBlueAuth(g) end
-            local lp = game:GetService("Players").LocalPlayer
-            if lp and lp:FindFirstChild("PlayerGui") then
-                for _, g in ipairs(lp.PlayerGui:GetChildren()) do killBlueAuth(g) end
-            end
-        end)
     end
 end)
 
