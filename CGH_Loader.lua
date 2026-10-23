@@ -6,7 +6,7 @@
     =======================================================
 --]]
 
--- [1. TỰ ĐỘNG TẢI VÀ CACHE LOGO CỜ VIỆT NAM & THƯ VIỆN UI]
+-- [1. TỰ ĐỘNG TẢI VÀ CACHE LOGO CỜ VIỆT NAM, THƯ VIỆN UI & ENGINE GỐC]
 pcall(function()
     if writefile and (not isfile or not isfile("cgh_logo.png")) then
         local imgData = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/cgh_logo.png")
@@ -18,6 +18,13 @@ pcall(function()
     if writefile and (not isfile or not isfile("CGH_Library.lua")) then
         local libData = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Library.lua?t=" .. tostring(os.time()))
         writefile("CGH_Library.lua", libData)
+    end
+end)
+
+pcall(function()
+    if writefile and (not isfile or not isfile("BloxFruits_Core.luau")) then
+        local coreData = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Core.luau?t=" .. tostring(os.time()))
+        writefile("BloxFruits_Core.luau", coreData)
     end
 end)
 
@@ -40,35 +47,22 @@ if setclipboard then
     end
 end
 
--- [3. HOOK REQUEST: BỎ QUA CHECK AUTH TỪ WORKER VÀ FIX SERVER TELEMETRY DEAD]
-local AUTH_PAYLOAD = 'loadstring(game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua"))()'
-local primaryReq = request or http_request or (syn and syn.request) or (http and http.request)
-if primaryReq and hookfunction then
+-- [3. HOOK REQUEST: FIX SERVER TELEMETRY DEAD & BẢO VỆ PHẢN HỒI MẠNG]
+local hooked_reqs = {}
+local function hookReqFunc(reqFunc)
+    if not reqFunc or type(reqFunc) ~= "function" or hooked_reqs[reqFunc] or not hookfunction then return reqFunc end
+    hooked_reqs[reqFunc] = true
+
     local in_req = false
     local orig_req
-    orig_req = hookfunction(primaryReq, function(options)
+    orig_req = hookfunction(reqFunc, function(options)
         if in_req then return orig_req(options) end
         in_req = true
-        
+
         if type(options) == "table" and type(options.Url) == "string" then
             local url = options.Url:lower()
-            if url:find("trungdao2k4") or (options.Body and tostring(options.Body):find('"action":"auth"')) then
-                in_req = false
-                return {
-                    Success = true,
-                    success = true,
-                    StatusCode = 200,
-                    status_code = 200,
-                    Status = 200,
-                    status = 200,
-                    StatusMessage = "OK",
-                    status_message = "OK",
-                    Headers = { ["content-type"] = "text/plain" },
-                    headers = { ["content-type"] = "text/plain" },
-                    Body = AUTH_PAYLOAD,
-                    body = AUTH_PAYLOAD
-                }
-            elseif url:find("realkidapi") then
+            -- Bỏ qua server tracker trái/boss đã chết để không treo engine
+            if url:find("realkidapi") or url:find("trungdao2k4") then
                 in_req = false
                 local okJson = '{"success":true,"status":"ok"}'
                 return {
@@ -87,12 +81,18 @@ if primaryReq and hookfunction then
                 }
             end
         end
-        
+
         local res = orig_req(options)
         in_req = false
         return res
     end)
+    return orig_req
 end
+
+pcall(function() if request then hookReqFunc(request) end end)
+pcall(function() if http_request then hookReqFunc(http_request) end end)
+pcall(function() if syn and syn.request then hookReqFunc(syn.request) end end)
+pcall(function() if http and http.request then hookReqFunc(http.request) end end)
 
 -- [4. HOOK LOADSTRING: ÉP TOÀN BỘ UI SANG CGH_LIBRARY SẠCH]
 local in_loadstring = false
@@ -119,7 +119,7 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
         in_loadstring = false
         return res
     end
-    
+
     if chunkname ~= nil then
         return orig_loadstring(src, chunkname, ...)
     else
@@ -127,68 +127,7 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
     end
 end)
 
--- [5. HỆ THỐNG DIỆT TRIỆT ĐỂ BLUE REALKID AUTH POPUP (CHỐNG TREO MÀN HÌNH)]
-local function killBlueAuth(gui)
-    if not gui or not gui:IsA("ScreenGui") then return end
-    if gui.Name == "CGH_Auth_GUI" or gui.Name == "CGH Hub GUI" or gui.Name == "Nousigi Hub GUI" then return end
-
-    local shouldKill = false
-    local lowerName = gui.Name:lower()
-    if lowerName:find("realkid") or lowerName:find("auth") then
-        shouldKill = true
-    else
-        for _, desc in ipairs(gui:GetDescendants()) do
-            if desc:IsA("TextLabel") or desc:IsA("TextButton") then
-                local txt = desc.Text:lower()
-                if txt:find("xin chào anh em") or txt:find("realkid hub") or txt:find("gián đoạn") or txt:find("đang chờ") or txt:find("lấy key") or txt:find("kiểm tra") then
-                    shouldKill = true
-                    break
-                end
-            end
-        end
-    end
-
-    if shouldKill then
-        pcall(function()
-            gui.Enabled = false
-            gui:Destroy()
-        end)
-    end
-end
-
--- Bắt ngay lập tức khi GUI vừa được add vào CoreGui hoặc PlayerGui
-pcall(function()
-    local cg = game:GetService("CoreGui")
-    cg.ChildAdded:Connect(killBlueAuth)
-    for _, g in ipairs(cg:GetChildren()) do killBlueAuth(g) end
-end)
-
-pcall(function()
-    local lp = game:GetService("Players").LocalPlayer
-    if lp then
-        local pg = lp:FindFirstChild("PlayerGui") or lp:WaitForChild("PlayerGui", 5)
-        if pg then
-            pg.ChildAdded:Connect(killBlueAuth)
-            for _, g in ipairs(pg:GetChildren()) do killBlueAuth(g) end
-        end
-    end
-end)
-
--- Vòng lặp dọn dẹp liên tục trong nền
-task.spawn(function()
-    while task.wait(0.2) do
-        pcall(function()
-            local cg = game:GetService("CoreGui")
-            for _, g in ipairs(cg:GetChildren()) do killBlueAuth(g) end
-            local lp = game:GetService("Players").LocalPlayer
-            if lp and lp:FindFirstChild("PlayerGui") then
-                for _, g in ipairs(lp.PlayerGui:GetChildren()) do killBlueAuth(g) end
-            end
-        end)
-    end
-end)
-
--- [6. GIAO DIỆN AUTH / KEY SYSTEM CHO CGH HUB]
+-- [5. GIAO DIỆN AUTH / KEY SYSTEM CHO CGH HUB]
 local function StartCGHKeySystem(onSuccess)
     local CoreGui = game:GetService("CoreGui")
     local TweenService = game:GetService("TweenService")
@@ -349,9 +288,13 @@ local function StartCGHKeySystem(onSuccess)
     end
 end
 
--- [7. KHỞI CHẠY ENGINE BLOX FRUITS GỐC (PATCHED CGH)]
+-- [6. KHỞI CHẠY LÕI GAME GỐC BLOX FRUITS (PATCHED CGH HUB)]
 StartCGHKeySystem(function()
     print("[+] CGH Auth passed. Đang khởi chạy Blox Fruits engine...")
+
+    -- Đảm bảo trạng thái UI mở sẵn
+    getgenv().UIToggled = true
+    getgenv().ReadyForGuiLoaded = true
 
     local coreScript = nil
     if isfile and isfile("BloxFruits_Core.luau") then
@@ -370,7 +313,7 @@ StartCGHKeySystem(function()
             coreScript = liveScript
             print("[+] Đã nạp BloxFruits_Core từ GitHub (" .. tostring(#liveScript) .. " bytes)")
         else
-            coreScript = game:HttpGet("https://cdnrealkidhub.pages.dev/BloxFruits.lua")
+            coreScript = game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua")
             print("[+] Đã nạp BloxFruits_Core từ CDN gốc (" .. tostring(#coreScript) .. " bytes)")
         end
     end
@@ -378,10 +321,15 @@ StartCGHKeySystem(function()
     if coreScript and #coreScript > 100 then
         local fn, err = loadstring(coreScript)
         if fn then
+            print("[+] Bắt đầu thực thi Blox Fruits engine...")
             task.spawn(function()
-                pcall(fn)
+                local ok, runErr = pcall(fn)
+                if ok then
+                    print("[+] CGH Hub Blox Fruits đã kích hoạt thành công!")
+                else
+                    warn("[!] Lỗi runtime BloxFruits_Core: " .. tostring(runErr))
+                end
             end)
-            print("[+] CGH Hub Blox Fruits đã kích hoạt thành công!")
         else
             warn("[!] Lỗi compile BloxFruits_Core: " .. tostring(err))
         end
