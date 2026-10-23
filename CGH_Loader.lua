@@ -42,18 +42,18 @@ getgenv().Config = true
 getgenv().UIToggled = true
 getgenv().ReadyForGuiLoaded = true
 
--- [3. GHI SẴN KEY HỢP LỆ CHO MỌI PLACE BLOX FRUITS ĐỂ REALKID TỰ ĐIỀN]
+-- [3. GHI SẴN REAL KEY CHO MỌI PLACE BLOX FRUITS ĐỂ REALKID TỰ ĐIỀN]
+local REAL_KEY = "TRAU_4D0281B6EB4A9BFDD18753A4B92860F9716BC4C439E1C448"
 pcall(function()
-    local validKey = "TRAU_D681832834B3C47DC3B817046FDEAFAF32E0911348B00509"
-    local validSave = "TRAU_5ED2C42BACED0ADB86FC42D48ECC842CD6F19F9E52F2C525"
     if writefile then
-        writefile("RealKid_Key_" .. tostring(game.PlaceId) .. ".txt", validKey)
-        writefile("RealKid_Key_2753915549.txt", validKey)
-        writefile("RealKid_Key_4442272183.txt", validKey)
-        writefile("RealKid_Key_7449423635.txt", validKey)
-        writefile("RealKid_Key_79091703265657.txt", validKey)
-        writefile("TrauHub_Save.txt", validSave)
-        writefile("CGH_Key.txt", "CGH_PASS")
+        writefile("RealKid_Key_" .. tostring(game.PlaceId) .. ".txt", REAL_KEY)
+        writefile("RealKid_Key_2753915549.txt", REAL_KEY)
+        writefile("RealKid_Key_4442272183.txt", REAL_KEY)
+        writefile("RealKid_Key_7449423635.txt", REAL_KEY)
+        writefile("RealKid_Key_79091703265657.txt", REAL_KEY)
+        writefile("RealKid_Key_100117331123089.txt", REAL_KEY)
+        writefile("TrauHub_Save.txt", REAL_KEY)
+        writefile("CGH_Key.txt", REAL_KEY)
     end
 end)
 
@@ -69,116 +69,7 @@ if setclipboard then
     end
 end
 
--- [5. HOOK GAME:HTTPGET & __NAMECALL: CHUYỂN HƯỚNG MỌI CUỘC GỌI ANHDOMIXI SANG BỘ NHỚ CỤC BỘ]
-pcall(function()
-    if hookfunction and game and game.HttpGet then
-        local orig_httpget
-        orig_httpget = hookfunction(game.HttpGet, function(self, url, ...)
-            if type(url) == "string" then
-                local lurl = url:lower()
-                if lurl:find("anhdomixi") or lurl:find("traurobloxdeptrai") then
-                    if isfile and isfile("anhdomixi.lua") then
-                        return readfile("anhdomixi.lua")
-                    end
-                elseif lurl:find("bloxfruits%.lua") and not lurl:find("cgh") then
-                    if isfile and isfile("BloxFruits_Core.luau") then
-                        return readfile("BloxFruits_Core.luau")
-                    end
-                end
-            end
-            return orig_httpget(self, url, ...)
-        end)
-    end
-end)
-
-if hookmetamethod then
-    local orig_nc
-    orig_nc = hookmetamethod(game, "__namecall", function(self, ...)
-        local method = getnamecallmethod()
-        if method == "HttpGet" or method == "httpGet" or method == "HttpGetAsync" then
-            local args = {...}
-            local url = args[1]
-            if type(url) == "string" then
-                local lurl = url:lower()
-                if lurl:find("anhdomixi") or lurl:find("traurobloxdeptrai") then
-                    if isfile and isfile("anhdomixi.lua") then
-                        return readfile("anhdomixi.lua")
-                    end
-                elseif lurl:find("bloxfruits%.lua") and not lurl:find("cgh") then
-                    if isfile and isfile("BloxFruits_Core.luau") then
-                        return readfile("BloxFruits_Core.luau")
-                    end
-                end
-            end
-        end
-        return orig_nc(self, ...)
-    end)
-end
-
--- [6. HOOK TOÀN BỘ CÁC HÀM REQUEST: AUTO-PASS KEY AUTH & FIX DEAD SERVER]
-local AUTH_JSON = '{"success":true,"status":"success","message":"Key hợp lệ","msg":"Key hợp lệ","code":200,"status_code":200,"valid":true,"whitelist":true,"key":"TRAU_D681832834B3C47DC3B817046FDEAFAF32E0911348B00509","data":"loadstring(game:HttpGet(\\"https://cdnrealkidhub.pages.dev/anhdomixi.lua\\"))()","script":"loadstring(game:HttpGet(\\"https://cdnrealkidhub.pages.dev/anhdomixi.lua\\"))()"}'
-
-local function handleRequestMock(options)
-    if type(options) == "table" then
-        local url = (options.Url or options.url or "")
-        if type(url) == "string" then
-            local lurl = url:lower()
-            -- Endpoint xác thực key RealKid: trả về JSON thành công 200 OK
-            if lurl:find("trungdao2k4") or (options.Body and tostring(options.Body):find('"action":"auth"')) or (options.body and tostring(options.body):find('"action":"auth"')) then
-                print("[+] Intercepted RealKid key auth! Trả về xác thực thành công...")
-                return {
-                    Success = true,
-                    success = true,
-                    StatusCode = 200,
-                    status_code = 200,
-                    Status = 200,
-                    status = 200,
-                    StatusMessage = "OK",
-                    status_message = "OK",
-                    Headers = {
-                        ["content-type"] = "application/json",
-                        ["Content-Type"] = "application/json",
-                        ["server"] = "cloudflare",
-                        ["connection"] = "keep-alive"
-                    },
-                    headers = {
-                        ["content-type"] = "application/json",
-                        ["Content-Type"] = "application/json",
-                        ["server"] = "cloudflare",
-                        ["connection"] = "keep-alive"
-                    },
-                    Body = AUTH_JSON,
-                    body = AUTH_JSON
-                }
-            -- Endpoint tracker trái / boss đã ngừng hoạt động: trả về JSON ok
-            elseif lurl:find("realkidapi") then
-                local okJson = '{"success":true,"status":"ok"}'
-                return {
-                    Success = true,
-                    success = true,
-                    StatusCode = 200,
-                    status_code = 200,
-                    Status = 200,
-                    status = 200,
-                    StatusMessage = "OK",
-                    status_message = "OK",
-                    Headers = {
-                        ["content-type"] = "application/json",
-                        ["Content-Type"] = "application/json"
-                    },
-                    headers = {
-                        ["content-type"] = "application/json",
-                        ["Content-Type"] = "application/json"
-                    },
-                    Body = okJson,
-                    body = okJson
-                }
-            end
-        end
-    end
-    return nil
-end
-
+-- [5. HOOK REQUEST: CHO PHÉP REAL KEY GỬI LÊN SERVER VÀ DUMP PHẢN HỒI GỐC]
 local hooked_fns = {}
 local function hookReq(fn)
     if not fn or type(fn) ~= "function" or hooked_fns[fn] or not hookfunction then return fn end
@@ -190,10 +81,36 @@ local function hookReq(fn)
         if in_call then return orig(opt) end
         in_call = true
 
-        local mock = handleRequestMock(opt)
-        if mock then
-            in_call = false
-            return mock
+        if type(opt) == "table" then
+            local url = tostring(opt.Url or opt.url or ""):lower()
+            -- Bỏ qua endpoint telemetry đã chết để không treo game
+            if url:find("realkidapi") then
+                in_call = false
+                local okJson = '{"success":true,"status":"ok"}'
+                return {
+                    Success = true, success = true,
+                    StatusCode = 200, status_code = 200,
+                    Status = 200, status = 200,
+                    StatusMessage = "OK", status_message = "OK",
+                    Headers = { ["content-type"] = "application/json" },
+                    headers = { ["content-type"] = "application/json" },
+                    Body = okJson, body = okJson
+                }
+            elseif url:find("trungdao2k4") then
+                print("[+] Gửi Real Key lên server RealKid Auth...")
+                local res = orig(opt)
+                local sc = res and (res.StatusCode or res.status_code)
+                print("[+] Server Auth trả về StatusCode: " .. tostring(sc))
+                if res and (res.Body or res.body) then
+                    local b = tostring(res.Body or res.body)
+                    print("[+] Độ dài Body nhận được: " .. tostring(#b) .. " bytes")
+                    if writefile then
+                        pcall(writefile, "RealKid_Server_Response.txt", b)
+                    end
+                end
+                in_call = false
+                return res
+            end
         end
 
         local res = orig(opt)
@@ -208,43 +125,7 @@ pcall(function() if http_request then hookReq(http_request) end end)
 pcall(function() if syn and syn.request then hookReq(syn.request) end end)
 pcall(function() if http and http.request then hookReq(http.request) end end)
 
--- [7. SAFE HOOK CHO HTTPSERVICE.JSONDECODE: CHỐNG TREO KHI PARSE AUTH RESPONSE]
-pcall(function()
-    local HttpService = game:GetService("HttpService")
-    if hookfunction and HttpService and HttpService.JSONDecode then
-        local orig_decode
-        orig_decode = hookfunction(HttpService.JSONDecode, function(self, str, ...)
-            local ok, res = pcall(orig_decode, self, str, ...)
-            if ok and type(res) == "table" then
-                return setmetatable(res, {
-                    __index = function(t, k)
-                        if k == "success" or k == "valid" or k == "whitelist" then return true end
-                        if k == "status" then return "success" end
-                        if k == "code" or k == "status_code" or k == "StatusCode" then return 200 end
-                        if k == "key" then return "TRAU_D681832834B3C47DC3B817046FDEAFAF32E0911348B00509" end
-                        if k == "data" or k == "script" or k == "url" then return 'loadstring(game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua"))()' end
-                        return true
-                    end
-                })
-            else
-                return {
-                    success = true,
-                    status = "success",
-                    message = "Key hợp lệ",
-                    code = 200,
-                    status_code = 200,
-                    valid = true,
-                    whitelist = true,
-                    key = "TRAU_D681832834B3C47DC3B817046FDEAFAF32E0911348B00509",
-                    data = 'loadstring(game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua"))()',
-                    script = 'loadstring(game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua"))()'
-                }
-            end
-        end)
-    end
-end)
-
--- [8. HOOK LOADSTRING: ÉP TOÀN BỘ UI SANG CGH_LIBRARY SẠCH & HỖ TRỢ EXECUTING AUTH]
+-- [6. DUMPER & HOOK LOADSTRING: DUMP TẤT CẢ MÃ NGUỒN ĐƯỢC GIẢI MÃ & BỌC CGH UI]
 local in_loadstring = false
 local orig_loadstring
 orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
@@ -256,8 +137,17 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
         end
     end
 
-    if type(src) == "string" then
-        -- Chuyển hướng Nousigi UI sang CGH_Library
+    if type(src) == "string" and #src > 10 then
+        -- Tự động Dump mọi chunk script mà game thực thi
+        pcall(function()
+            if writefile then
+                local dumpName = "dumped_chunk_" .. tostring(#src) .. "_" .. tostring(os.time()) .. ".luau"
+                writefile(dumpName, src)
+                print("[+] ĐÃ DUMP CHUNK: " .. dumpName .. " (" .. tostring(#src) .. " bytes)")
+            end
+        end)
+
+        -- Bọc UI Nousigi sang CGH Library sạch cờ Việt Nam
         if string.find(src, "Nousigi Hub") or string.find(src, "dut dit") or string.find(src, "T1UIColor") then
             in_loadstring = true
             print("[+] Intercepted UI Library! Chuyển hướng sang CGH_Library...")
@@ -270,19 +160,6 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
             local res = orig_loadstring(customLib)
             in_loadstring = false
             return res
-        -- Nếu RealKid gọi loadstring trực tiếp trên payload JSON auth
-        elseif string.find(src, '"action":"auth"') or string.find(src, '"status":"success"') or string.find(src, '"success":true') then
-            print("[+] RealKid loadstring(auth_response) intercepted! Chuyển sang thực thi Blox Fruits UI...")
-            in_loadstring = true
-            local scriptCode
-            if isfile and isfile("anhdomixi.lua") then
-                scriptCode = readfile("anhdomixi.lua")
-            else
-                scriptCode = game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua")
-            end
-            local res = orig_loadstring(scriptCode)
-            in_loadstring = false
-            return res
         end
     end
 
@@ -293,13 +170,13 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
     end
 end)
 
--- [9. TỰ ĐỘNG BẤM 'KIỂM TRA' TRÊN KHUNG BLUE REALKID]
+-- [7. TỰ ĐỘNG BẤM 'KIỂM TRA' TRÊN KHUNG BLUE REALKID]
 task.spawn(function()
     local coreGui = game:GetService("CoreGui")
     local playerGui = game:GetService("Players").LocalPlayer and game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
 
     for _ = 1, 60 do
-        task.wait(0.25)
+        task.wait(0.3)
         for _, parent in ipairs({coreGui, playerGui}) do
             if parent then
                 for _, obj in ipairs(parent:GetDescendants()) do
@@ -320,7 +197,7 @@ task.spawn(function()
     end
 end)
 
--- [10. GIAO DIỆN AUTH / KEY SYSTEM CHO CGH HUB]
+-- [8. GIAO DIỆN AUTH / KEY SYSTEM CHO CGH HUB]
 local function StartCGHKeySystem(onSuccess)
     local CoreGui = game:GetService("CoreGui")
     local TweenService = game:GetService("TweenService")
@@ -406,7 +283,7 @@ local function StartCGHKeySystem(onSuccess)
     KeyBox.Font = Enum.Font.GothamMedium
     KeyBox.PlaceholderText = "Nhập Key tại đây..."
     KeyBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
-    KeyBox.Text = isfile and isfile("CGH_Key.txt") and readfile("CGH_Key.txt") or ""
+    KeyBox.Text = REAL_KEY
     KeyBox.TextColor3 = Color3.fromRGB(240, 240, 240)
     KeyBox.TextSize = 14
 
@@ -475,13 +352,10 @@ local function StartCGHKeySystem(onSuccess)
         end
     end)
 
-    -- Tự động tiếp tục nếu key đã lưu hợp lệ
-    if isfile and isfile("CGH_Key.txt") and #readfile("CGH_Key.txt") > 0 then
-        task.delay(0.5, proceed)
-    end
+    task.delay(0.5, proceed)
 end
 
--- [11. KHỞI CHẠY LÕI GAME GỐC REALKID 1.5MB (PATCHED CGH HUB)]
+-- [9. KHỞI CHẠY LÕI GAME GỐC REALKID 1.5MB (PATCHED CGH HUB)]
 StartCGHKeySystem(function()
     print("[+] CGH Auth passed. Đang khởi chạy Blox Fruits engine...")
     getgenv().UIToggled = true
