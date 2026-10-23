@@ -40,40 +40,74 @@ if setclipboard then
     end
 end
 
--- [3. HOOK REQUEST: BỎ QUA CHECK AUTH TỪ WORKER VÀ FIX SERVER DEAD]
+-- [3. HOOK REQUEST: BỎ QUA CHECK AUTH TỪ WORKER VÀ FIX SERVER TELEMETRY DEAD]
 local AUTH_PAYLOAD = 'loadstring(game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua"))()'
 local primaryReq = request or http_request or (syn and syn.request) or (http and http.request)
 if primaryReq and hookfunction then
+    local in_req = false
     local orig_req
     orig_req = hookfunction(primaryReq, function(options)
+        if in_req then return orig_req(options) end
+        in_req = true
+        
         if type(options) == "table" and type(options.Url) == "string" then
             local url = options.Url:lower()
             if url:find("trungdao2k4") or (options.Body and tostring(options.Body):find('"action":"auth"')) then
+                in_req = false
                 return {
                     Success = true,
+                    success = true,
                     StatusCode = 200,
+                    status_code = 200,
+                    Status = 200,
+                    status = 200,
                     StatusMessage = "OK",
+                    status_message = "OK",
                     Headers = { ["content-type"] = "text/plain" },
-                    Body = AUTH_PAYLOAD
+                    headers = { ["content-type"] = "text/plain" },
+                    Body = AUTH_PAYLOAD,
+                    body = AUTH_PAYLOAD
                 }
             elseif url:find("realkidapi") then
+                in_req = false
+                local okJson = '{"success":true,"status":"ok"}'
                 return {
                     Success = true,
+                    success = true,
                     StatusCode = 200,
+                    status_code = 200,
+                    Status = 200,
+                    status = 200,
                     StatusMessage = "OK",
+                    status_message = "OK",
                     Headers = { ["content-type"] = "application/json" },
-                    Body = '{"success":true,"status":"ok"}'
+                    headers = { ["content-type"] = "application/json" },
+                    Body = okJson,
+                    body = okJson
                 }
             end
         end
-        return orig_req(options)
+        
+        local res = orig_req(options)
+        in_req = false
+        return res
     end)
 end
 
 -- [4. HOOK LOADSTRING: ÉP TOÀN BỘ UI SANG CGH_LIBRARY SẠCH]
+local in_loadstring = false
 local orig_loadstring
 orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
+    if in_loadstring then
+        if chunkname ~= nil then
+            return orig_loadstring(src, chunkname, ...)
+        else
+            return orig_loadstring(src)
+        end
+    end
+
     if type(src) == "string" and (string.find(src, "Nousigi Hub") or string.find(src, "dut dit") or string.find(src, "T1UIColor")) then
+        in_loadstring = true
         print("[+] Intercepted UI Library! Chuyển hướng sang CGH_Library...")
         local customLib
         if isfile and isfile("CGH_Library.lua") then
@@ -81,7 +115,9 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
         else
             customLib = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Library.lua?t=" .. tostring(os.time()))
         end
-        return orig_loadstring(customLib)
+        local res = orig_loadstring(customLib)
+        in_loadstring = false
+        return res
     end
     
     if chunkname ~= nil then
@@ -91,43 +127,64 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
     end
 end)
 
--- [5. TỰ ĐỘNG DỌN DẸP / BẤM CHECK CHO BLUE REALKID AUTH POPUP NẾU CÓ]
-task.spawn(function()
-    for _ = 1, 30 do
-        task.wait(0.3)
-        local coreGui = game:GetService("CoreGui")
-        local playerGui = game:GetService("Players").LocalPlayer and game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
+-- [5. HỆ THỐNG DIỆT TRIỆT ĐỂ BLUE REALKID AUTH POPUP (CHỐNG TREO MÀN HÌNH)]
+local function killBlueAuth(gui)
+    if not gui or not gui:IsA("ScreenGui") then return end
+    if gui.Name == "CGH_Auth_GUI" or gui.Name == "CGH Hub GUI" or gui.Name == "Nousigi Hub GUI" then return end
 
-        for _, parent in ipairs({coreGui, playerGui}) do
-            if parent then
-                for _, obj in ipairs(parent:GetChildren()) do
-                    if obj:IsA("ScreenGui") and obj.Name ~= "CGH_Auth_GUI" and obj.Name ~= "CGH Hub GUI" and obj.Name ~= "Nousigi Hub GUI" then
-                        local isRealKidAuth = false
-                        if obj.Name:lower():find("realkid") then
-                            isRealKidAuth = true
-                        else
-                            for _, child in ipairs(obj:GetDescendants()) do
-                                if child:IsA("TextButton") and (child.Text:find("KIỂM TRA") or child.Text:find("Kiem Tra")) then
-                                    if firesignal then
-                                        firesignal(child.MouseButton1Click)
-                                    elseif getconnections then
-                                        for _, c in ipairs(getconnections(child.MouseButton1Click)) do
-                                            c:Fire()
-                                        end
-                                    end
-                                    isRealKidAuth = true
-                                    break
-                                end
-                            end
-                        end
-                        if isRealKidAuth then
-                            task.wait(0.4)
-                            pcall(function() obj:Destroy() end)
-                        end
-                    end
+    local shouldKill = false
+    local lowerName = gui.Name:lower()
+    if lowerName:find("realkid") or lowerName:find("auth") then
+        shouldKill = true
+    else
+        for _, desc in ipairs(gui:GetDescendants()) do
+            if desc:IsA("TextLabel") or desc:IsA("TextButton") then
+                local txt = desc.Text:lower()
+                if txt:find("xin chào anh em") or txt:find("realkid hub") or txt:find("gián đoạn") or txt:find("đang chờ") or txt:find("lấy key") or txt:find("kiểm tra") then
+                    shouldKill = true
+                    break
                 end
             end
         end
+    end
+
+    if shouldKill then
+        pcall(function()
+            gui.Enabled = false
+            gui:Destroy()
+        end)
+    end
+end
+
+-- Bắt ngay lập tức khi GUI vừa được add vào CoreGui hoặc PlayerGui
+pcall(function()
+    local cg = game:GetService("CoreGui")
+    cg.ChildAdded:Connect(killBlueAuth)
+    for _, g in ipairs(cg:GetChildren()) do killBlueAuth(g) end
+end)
+
+pcall(function()
+    local lp = game:GetService("Players").LocalPlayer
+    if lp then
+        local pg = lp:FindFirstChild("PlayerGui") or lp:WaitForChild("PlayerGui", 5)
+        if pg then
+            pg.ChildAdded:Connect(killBlueAuth)
+            for _, g in ipairs(pg:GetChildren()) do killBlueAuth(g) end
+        end
+    end
+end)
+
+-- Vòng lặp dọn dẹp liên tục trong nền
+task.spawn(function()
+    while task.wait(0.2) do
+        pcall(function()
+            local cg = game:GetService("CoreGui")
+            for _, g in ipairs(cg:GetChildren()) do killBlueAuth(g) end
+            local lp = game:GetService("Players").LocalPlayer
+            if lp and lp:FindFirstChild("PlayerGui") then
+                for _, g in ipairs(lp.PlayerGui:GetChildren()) do killBlueAuth(g) end
+            end
+        end)
     end
 end)
 
@@ -321,8 +378,8 @@ StartCGHKeySystem(function()
     if coreScript and #coreScript > 100 then
         local fn, err = loadstring(coreScript)
         if fn then
-            pcall(function()
-                fn()
+            task.spawn(function()
+                pcall(fn)
             end)
             print("[+] CGH Hub Blox Fruits đã kích hoạt thành công!")
         else
