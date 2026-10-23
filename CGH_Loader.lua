@@ -6,11 +6,18 @@
     =======================================================
 --]]
 
--- [1. TỰ ĐỘNG TẢI VÀ CACHE LOGO CỜ VIỆT NAM]
+-- [1. TỰ ĐỘNG TẢI VÀ CACHE LOGO CỜ VIỆT NAM & THƯ VIỆN UI CGH]
 pcall(function()
     if writefile and (not isfile or not isfile("cgh_logo.png")) then
         local imgData = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/cgh_logo.png")
         writefile("cgh_logo.png", imgData)
+    end
+end)
+
+pcall(function()
+    if writefile and (not isfile or not isfile("CGH_Library.lua")) then
+        local libData = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Library.lua?t=" .. tostring(os.time()))
+        writefile("CGH_Library.lua", libData)
     end
 end)
 
@@ -28,7 +35,47 @@ pcall(function()
     end
 end)
 
--- [3. HOOK REQUEST: BẢO VỆ & TRẢ VỀ SUCCESS NẾU CÓ BẤT KỲ CUỘC GỌI AUTH NÀO]
+-- [3. TỰ ĐỘNG DỌN DẸP MỌI KHUNG KEY GUI CŨ TRÊN MÀN HÌNH NẾU CÒN SÓT LẠI]
+task.spawn(function()
+    local function cleanGuis(parent)
+        if not parent then return end
+        for _, gui in ipairs(parent:GetChildren()) do
+            if gui:IsA("ScreenGui") and gui.Name ~= "CGH_Auth_GUI" then
+                local shouldKill = false
+                local lowerName = gui.Name:lower()
+                if lowerName:find("realkid") or lowerName:find("key") or lowerName:find("auth") then
+                    shouldKill = true
+                else
+                    for _, desc in ipairs(gui:GetDescendants()) do
+                        if desc:IsA("TextLabel") or desc:IsA("TextButton") then
+                            local txt = desc.Text:lower()
+                            if txt:find("xin chào anh em") or txt:find("kiểm tra") or txt:find("kết nối gián đoạn") then
+                                shouldKill = true
+                                break
+                            end
+                        end
+                    end
+                end
+                if shouldKill then
+                    pcall(function() gui:Destroy() end)
+                end
+            end
+        end
+    end
+
+    for _ = 1, 15 do
+        pcall(function()
+            cleanGuis(game:GetService("CoreGui"))
+            local lp = game:GetService("Players").LocalPlayer
+            if lp and lp:FindFirstChild("PlayerGui") then
+                cleanGuis(lp.PlayerGui)
+            end
+        end)
+        task.wait(0.2)
+    end
+end)
+
+-- [4. HOOK REQUEST: BẢO VỆ & TRẢ VỀ SUCCESS NẾU CÓ BẤT KỲ CUỘC GỌI AUTH NÀO]
 local AUTH_PAYLOAD = 'loadstring(game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua"))()'
 local function hookReq(reqFunc)
     if not reqFunc or not hookfunction then return reqFunc end
@@ -59,7 +106,7 @@ pcall(function() if http_request then hookReq(http_request) end end)
 pcall(function() if syn and syn.request then hookReq(syn.request) end end)
 pcall(function() if http and http.request then hookReq(http.request) end end)
 
--- [4. HOOK SETCLIPBOARD: MỌI LINK DISCORD ĐỀU THÀNH RICK ROLL]
+-- [5. HOOK SETCLIPBOARD: MỌI LINK DISCORD ĐỀU THÀNH RICK ROLL]
 local RICK_ROLL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 if setclipboard then
     local orig_setclipboard = setclipboard
@@ -71,7 +118,7 @@ if setclipboard then
     end
 end
 
--- [5. HOOK LOADSTRING: ÉP TOÀN BỘ UI SANG CGH_LIBRARY SẠCH]
+-- [6. HOOK LOADSTRING: ÉP TOÀN BỘ UI SANG CGH_LIBRARY SẠCH]
 local orig_loadstring
 orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
     if type(src) == "string" and (string.find(src, "Nousigi Hub") or string.find(src, "dut dit") or string.find(src, "T1UIColor") or string.find(src, "RealKid")) then
@@ -80,7 +127,7 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
         if isfile and isfile("CGH_Library.lua") then
             customLib = readfile("CGH_Library.lua")
         else
-            customLib = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Library.lua")
+            customLib = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Library.lua?t=" .. tostring(os.time()))
         end
         return orig_loadstring(customLib)
     end
@@ -92,8 +139,8 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
     end
 end)
 
--- [6. KÍCH HOẠT THẲNG LÕI GAME ANHDOMIXI (POST-AUTH ENGINE)]
-print("[+] CGH Hub Blox Fruits: Đang kích hoạt engine chính (Bypassed)...")
+-- [7. KÍCH HOẠT THẲNG LÕI GAME GỐC REALKID (BYPASSED HOÀN TOÀN TẦNG KEY)]
+print("[+] CGH Hub Blox Fruits v2: Khởi động thành công! Đang nạp giao diện CGH...")
 
 local coreScript = nil
 
@@ -106,20 +153,20 @@ if ok and livePayload and #livePayload > 1000 then
     coreScript = livePayload
 end
 
--- Ưu tiên 2: Bản lưu trên GitHub repo
-if not coreScript or #coreScript < 1000 then
-    local ok2, ghPayload = pcall(function()
-        return game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Core.luau")
-    end)
-    if ok2 and ghPayload and #ghPayload > 1000 then
-        coreScript = ghPayload
-    end
-end
-
--- Ưu tiên 3: File lưu trong workspace
+-- Ưu tiên 2: File lưu trong workspace
 if not coreScript or #coreScript < 1000 then
     if isfile and isfile("BloxFruits_Core.luau") then
         coreScript = readfile("BloxFruits_Core.luau")
+    end
+end
+
+-- Ưu tiên 3: Bản lưu trên GitHub repo
+if not coreScript or #coreScript < 1000 then
+    local ok2, ghPayload = pcall(function()
+        return game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Core.luau?t=" .. tostring(os.time()))
+    end)
+    if ok2 and ghPayload and #ghPayload > 1000 then
+        coreScript = ghPayload
     end
 end
 
@@ -127,7 +174,7 @@ if coreScript and #coreScript > 1000 then
     local fn, err = loadstring(coreScript)
     if fn then
         fn()
-        print("[+] CGH Hub Blox Fruits đã kích hoạt thành công!")
+        print("[+] CGH Hub Blox Fruits đã kích hoạt hoàn tất!")
     else
         warn("[!] Lỗi compile BloxFruits_Core: " .. tostring(err))
     end
