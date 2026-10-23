@@ -14,7 +14,7 @@ pcall(function()
     end
 end)
 
--- [2. GHI ĐÈ TOKEN LƯU TRỮ KEY HỢP LỆ TRONG WORKSPACE]
+-- [2. GHI ĐÈ KEY FILES HỢP LỆ VÀO WORKSPACE]
 pcall(function()
     local validKey = "TRAU_D681832834B3C47DC3B817046FDEAFAF32E0911348B00509"
     local validSave = "TRAU_5ED2C42BACED0ADB86FC42D48ECC842CD6F19F9E52F2C525"
@@ -28,32 +28,24 @@ pcall(function()
     end
 end)
 
--- [3. HOOK REQUEST: BYPASS 100% HỆ THỐNG AUTH CỦA REALKID]
--- Server trungdao2k4 khi key hợp lệ sẽ trả về đoạn mã load payload game chính
-local AUTH_SUCCESS_PAYLOAD = 'loadstring(game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua"))()'
-
+-- [3. HOOK REQUEST: BẢO VỆ & TRẢ VỀ SUCCESS NẾU CÓ BẤT KỲ CUỘC GỌI AUTH NÀO]
+local AUTH_PAYLOAD = 'loadstring(game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua"))()'
 local function hookReq(reqFunc)
     if not reqFunc or not hookfunction then return reqFunc end
     local orig_req
     orig_req = hookfunction(reqFunc, function(options)
         if type(options) == "table" and type(options.Url) == "string" then
             local url = options.Url:lower()
-            -- Chặn mọi cuộc gọi xác thực của RealKid và trả về mã kích hoạt thành công
             if url:find("trungdao2k4") or url:find("realkidapi") or url:find("workers.dev") then
-                if options.Body and tostring(options.Body):find("auth") then
-                    return {
-                        StatusCode = 200,
-                        StatusMessage = "OK",
-                        Headers = { ["Content-Type"] = "text/plain" },
-                        Body = AUTH_SUCCESS_PAYLOAD
-                    }
-                end
-                -- Chặn telemetry gửi dữ liệu người chơi
                 return {
+                    Success = true,
+                    success = true,
                     StatusCode = 200,
+                    status = 200,
                     StatusMessage = "OK",
-                    Headers = { ["Content-Type"] = "application/json" },
-                    Body = '{"success":true}'
+                    Headers = { ["content-type"] = "text/plain" },
+                    Body = AUTH_PAYLOAD,
+                    body = AUTH_PAYLOAD
                 }
             end
         end
@@ -82,7 +74,7 @@ end
 -- [5. HOOK LOADSTRING: ÉP TOÀN BỘ UI SANG CGH_LIBRARY SẠCH]
 local orig_loadstring
 orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
-    if type(src) == "string" and (string.find(src, "Nousigi Hub") or string.find(src, "dut dit") or string.find(src, "T1UIColor")) then
+    if type(src) == "string" and (string.find(src, "Nousigi Hub") or string.find(src, "dut dit") or string.find(src, "T1UIColor") or string.find(src, "RealKid")) then
         print("[+] Intercepted UI Library! Chuyển hướng sang CGH_Library...")
         local customLib
         if isfile and isfile("CGH_Library.lua") then
@@ -100,62 +92,38 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
     end
 end)
 
--- [6. TỰ ĐỘNG BẤM KIỂM TRA NẾU KHUNG KEY HIỆN LÊN]
-task.spawn(function()
-    for _ = 1, 25 do
-        task.wait(0.3)
-        local coreGui = game:GetService("CoreGui")
-        local playerGui = game:GetService("Players").LocalPlayer:FindFirstChild("PlayerGui")
-        local found = false
-
-        for _, parent in ipairs({coreGui, playerGui}) do
-            if parent then
-                for _, obj in ipairs(parent:GetDescendants()) do
-                    if obj:IsA("TextButton") and (obj.Text:find("KIỂM TRA") or obj.Text:find("Kiem Tra")) then
-                        if firesignal then
-                            firesignal(obj.MouseButton1Click)
-                        else
-                            for _, c in ipairs(getconnections(obj.MouseButton1Click)) do
-                                c:Fire()
-                            end
-                        end
-                        found = true
-                        break
-                    end
-                end
-            end
-            if found then break end
-        end
-        if found then break end
-    end
-end)
-
--- [7. KÍCH HOẠT SCRIPT GỐC REALKID ĐÃ ĐƯỢC PATCH]
-print("[+] CGH Hub Blox Fruits: Đang nạp engine chính...")
+-- [6. KÍCH HOẠT THẲNG LÕI GAME ANHDOMIXI (POST-AUTH ENGINE)]
+print("[+] CGH Hub Blox Fruits: Đang kích hoạt engine chính (Bypassed)...")
 
 local coreScript = nil
-local success, liveScript = pcall(function()
-    return game:HttpGet("https://cdnrealkidhub.pages.dev/BloxFruits.lua")
+
+-- Ưu tiên 1: Tải trực tiếp payload game chính từ CDN của tác giả (không chứa Blue Box Auth)
+local ok, livePayload = pcall(function()
+    return game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua")
 end)
 
-if success and liveScript and #liveScript > 1000 then
-    local pos = liveScript:find("%-%- This file was protected")
-    if pos then
-        coreScript = liveScript:sub(pos)
-    else
-        coreScript = liveScript
+if ok and livePayload and #livePayload > 1000 then
+    coreScript = livePayload
+end
+
+-- Ưu tiên 2: Bản lưu trên GitHub repo
+if not coreScript or #coreScript < 1000 then
+    local ok2, ghPayload = pcall(function()
+        return game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Core.luau")
+    end)
+    if ok2 and ghPayload and #ghPayload > 1000 then
+        coreScript = ghPayload
     end
 end
 
+-- Ưu tiên 3: File lưu trong workspace
 if not coreScript or #coreScript < 1000 then
     if isfile and isfile("BloxFruits_Core.luau") then
         coreScript = readfile("BloxFruits_Core.luau")
-    else
-        coreScript = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Core.luau")
     end
 end
 
-if coreScript and #coreScript > 100 then
+if coreScript and #coreScript > 1000 then
     local fn, err = loadstring(coreScript)
     if fn then
         fn()
@@ -164,5 +132,5 @@ if coreScript and #coreScript > 100 then
         warn("[!] Lỗi compile BloxFruits_Core: " .. tostring(err))
     end
 else
-    warn("[!] Không thể tải BloxFruits_Core.luau!")
+    warn("[!] Không thể nạp mã nguồn Blox Fruits!")
 end
