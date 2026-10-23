@@ -9,9 +9,13 @@ if getgenv().Nousigi or getgenv().CGH then
 end
 getgenv().Nousigi = true
 getgenv().CGH = true
-getgenv().Config = true 
+getgenv().Config = true
+getgenv().UIToggled = true
+getgenv().ReadyForGuiLoaded = true
 
-local DisableAnimation = game.Players.LocalPlayer.PlayerGui:FindFirstChild('TouchGui')
+local lp = game:GetService("Players").LocalPlayer
+local pg = lp and (lp:FindFirstChild("PlayerGui") or lp:WaitForChild("PlayerGui", 5))
+local DisableAnimation = pg and pg:FindFirstChild('TouchGui')
 local T1UIColor = {
 	["Border Color"] = Color3.fromRGB(220, 20, 40),
 	["Click Effect Color"] = Color3.fromRGB(230, 230, 230),
@@ -100,16 +104,12 @@ end
 Library_Function.Gui = Instance.new('ScreenGui')
 Library_Function.Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 Library_Function.Gui.Name = 'CGH Hub GUI'
-Library_Function.Gui.Enabled = false
-
-getgenv().ReadyForGuiLoaded = false
+Library_Function.Gui.Enabled = true
+getgenv().ReadyForGuiLoaded = true
+getgenv().UIToggled = true
 spawn(function()
-	repeat
-		task.wait()
-	until getgenv().ReadyForGuiLoaded
-	if getgenv().UIToggled then
-		Library_Function.Gui.Enabled = true
-	end
+	task.wait(0.1)
+	Library_Function.Gui.Enabled = true
 end)
 
 

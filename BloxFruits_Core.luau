@@ -1,6 +1,10 @@
 task.spawn(function()
     pcall(function()
-        loadstring(game:HttpGet("https://raw.githubusercontent.com/traurobloxdeptrai/traukhoaito/refs/heads/main/anhdomixi.lua"))()
+        if isfile and isfile("anhdomixi.lua") then
+            loadstring(readfile("anhdomixi.lua"))()
+        else
+            loadstring(game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua"))()
+        end
     end)
 end)
 -- This file was protected using Luraph Obfuscator v15.0 [https://lura.ph/]
