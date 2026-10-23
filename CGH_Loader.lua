@@ -21,19 +21,111 @@ local function getCustomLogo()
     return "rbxassetid://96220014754961"
 end
 
--- [2. HOOK SETCLIPBOARD: MỌI LINK DISCORD ĐỀU THÀNH RICK ROLL]
-local RICK_ROLL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-if setclipboard then
-    local orig_setclipboard = setclipboard
-    setclipboard = function(text)
-        if type(text) == "string" and (string.find(text, "discord%.gg") or string.find(text, "discord%.com")) then
-            return orig_setclipboard(RICK_ROLL)
-        end
-        return orig_setclipboard(text)
+-- [2. HỆ THỐNG BYPASS AUTH GỐC CỦA TÁC GIẢ]
+local BYPASS_TOKEN = "TRAU_0E32B39DDBA01BDDCD7DF94F852880B6D64C4B9D0563EAB0"
+local BYPASS_SAVE = "TRAU_5ED2C42BACED0ADB86FC42D48ECC842CD6F19F9E52F2C525"
+
+-- Tự động tạo trước file token hợp lệ trong workspace
+pcall(function()
+    local placeId = tostring(game.PlaceId)
+    if writefile then
+        writefile("RealKid_Key_" .. placeId .. ".txt", BYPASS_TOKEN)
+        writefile("TrauHub_Save.txt", BYPASS_SAVE)
+        writefile("CGH_Key.txt", "CGH_VIP_AUTHENTICATED")
+    end
+end)
+
+-- Hook isfile / readfile để luôn trả về token bypass chuẩn
+if isfile and readfile then
+    local orig_isfile = isfile
+    local orig_readfile = readfile
+    
+    local hook_is = hookfunction or replaceclosure
+    if hook_is then
+        pcall(function()
+            hook_is(isfile, function(file)
+                if type(file) == "string" then
+                    if file:find("RealKid_Key") or file:find("TrauHub_Save") or file:find("teddy_key") then
+                        return true
+                    end
+                end
+                return orig_isfile(file)
+            end)
+        end)
+
+        pcall(function()
+            hook_is(readfile, function(file)
+                if type(file) == "string" then
+                    if file:find("RealKid_Key") or file:find("teddy_key") then
+                        return BYPASS_TOKEN
+                    elseif file:find("TrauHub_Save") then
+                        return BYPASS_SAVE
+                    end
+                end
+                return orig_readfile(file)
+            end)
+        end)
     end
 end
 
--- [3. GIAO DIỆN AUTH / KEY SYSTEM CHO CGH HUB]
+-- Hook request để chặn Webhook gián điệp và giả lập phản hồi Auth thành công
+local env = (getgenv and getgenv()) or _G or {}
+local req = env.request or env.http_request or (env.syn and env.syn.request) or (env.http and env.http.request)
+if req and (hookfunction or replaceclosure) then
+    local hook_fn = hookfunction or replaceclosure
+    pcall(function()
+        hook_fn(req, function(options)
+            if type(options) == "table" and type(options.Url) == "string" then
+                local url = options.Url:lower()
+                -- Giả lập API Auth thành công
+                if url:find("webhook.trungdao2k4.workers.dev") or url:find("realkidapi.online") then
+                    if options.Body and tostring(options.Body):find("auth") then
+                        return {
+                            StatusCode = 200,
+                            StatusMessage = "OK",
+                            Headers = { ["Content-Type"] = "application/json" },
+                            Body = '{"success":true,"status":"success","message":"Bypassed by CGH Hub","valid":true}'
+                        }
+                    end
+                    -- Chặn telemetry gửi dữ liệu người chơi
+                    return {
+                        StatusCode = 200,
+                        StatusMessage = "OK",
+                        Headers = { ["Content-Type"] = "application/json" },
+                        Body = '{"success":true}'
+                    }
+                end
+            end
+            return req(options)
+        end)
+    end)
+end
+
+-- [3. HOOK SETCLIPBOARD: MỌI LINK DISCORD ĐỀU THÀNH RICK ROLL]
+local RICK_ROLL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+if setclipboard then
+    local orig_setclipboard = setclipboard
+    local hook_cb = hookfunction or replaceclosure
+    if hook_cb then
+        pcall(function()
+            hook_cb(setclipboard, function(text)
+                if type(text) == "string" and (string.find(text, "discord%.gg") or string.find(text, "discord%.com")) then
+                    return orig_setclipboard(RICK_ROLL)
+                end
+                return orig_setclipboard(text)
+            end)
+        end)
+    else
+        setclipboard = function(text)
+            if type(text) == "string" and (string.find(text, "discord%.gg") or string.find(text, "discord%.com")) then
+                return orig_setclipboard(RICK_ROLL)
+            end
+            return orig_setclipboard(text)
+        end
+    end
+end
+
+-- [4. GIAO DIỆN AUTH / KEY SYSTEM CHO CGH HUB]
 local function StartCGHKeySystem(onSuccess)
     local CoreGui = game:GetService("CoreGui")
     local TweenService = game:GetService("TweenService")
@@ -119,7 +211,7 @@ local function StartCGHKeySystem(onSuccess)
     KeyBox.Font = Enum.Font.GothamMedium
     KeyBox.PlaceholderText = "Nhập Key tại đây..."
     KeyBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
-    KeyBox.Text = isfile and isfile("CGH_Key.txt") and readfile("CGH_Key.txt") or ""
+    KeyBox.Text = isfile and isfile("CGH_Key.txt") and readfile("CGH_Key.txt") or "CGH_VIP_KEY"
     KeyBox.TextColor3 = Color3.fromRGB(240, 240, 240)
     KeyBox.TextSize = 14
 
@@ -165,12 +257,12 @@ local function StartCGHKeySystem(onSuccess)
         local input = KeyBox.Text
         StatusText.Text = "Đang xác thực..."
         StatusText.TextColor3 = Color3.fromRGB(255, 215, 0)
-        task.wait(0.3)
+        task.wait(0.2)
 
         if writefile then writefile("CGH_Key.txt", input) end
         StatusText.Text = "Key hợp lệ! Đang mở CGH Hub..."
         StatusText.TextColor3 = Color3.fromRGB(50, 220, 100)
-        task.wait(0.5)
+        task.wait(0.3)
 
         TweenService:Create(Main, TweenInfo.new(0.3), { Position = UDim2.new(0.5, 0, 0.4, 0), BackgroundTransparency = 1 }):Play()
         task.wait(0.3)
@@ -187,69 +279,78 @@ local function StartCGHKeySystem(onSuccess)
     end)
 end
 
--- [4. KHỞI CHẠY VÀ HOOK CHUYỂN HƯỚNG SANG CGH_LIBRARY SẠCH]
+-- [5. KHỞI CHẠY VÀ HOOK CHUYỂN HƯỚNG SANG CGH_LIBRARY SẠCH]
 StartCGHKeySystem(function()
     print("[+] CGH Auth passed. Đang khởi chạy Blox Fruits engine...")
 
     -- Hook loadstring: Ép toàn bộ UI sang CGH_Library.lua sạch
-    local orig_loadstring
-    orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
-        if type(src) == "string" and (string.find(src, "Nousigi Hub") or string.find(src, "dut dit") or string.find(src, "T1UIColor")) then
-            print("[+] Intercepted UI Library! Chuyển hướng sang CGH_Library...")
-            local customLib
-            if isfile and isfile("CGH_Library.lua") then
-                customLib = readfile("CGH_Library.lua")
-            else
-                customLib = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Library.lua")
-            end
-            return orig_loadstring(customLib)
-        end
-        
-        if chunkname ~= nil then
-            return orig_loadstring(src, chunkname, ...)
-        else
-            return orig_loadstring(src)
-        end
-    end)
+    local orig_loadstring = loadstring
+    local hook_ls = hookfunction or replaceclosure
+    if hook_ls then
+        pcall(function()
+            hook_ls(loadstring, function(src, chunkname, ...)
+                if type(src) == "string" and (string.find(src, "Nousigi Hub") or string.find(src, "dut dit") or string.find(src, "T1UIColor")) then
+                    print("[+] Intercepted UI Library! Chuyển hướng sang CGH_Library...")
+                    local customLib
+                    if isfile and isfile("CGH_Library.lua") then
+                        customLib = readfile("CGH_Library.lua")
+                    else
+                        customLib = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Library.lua")
+                    end
+                    return orig_loadstring(customLib)
+                end
+                
+                if chunkname ~= nil then
+                    return orig_loadstring(src, chunkname, ...)
+                else
+                    return orig_loadstring(src)
+                end
+            end)
+        end)
+    end
 
-    -- [5. HỆ THỐNG AUTO-UPDATE NÂNG CAO]
-    -- Ưu tiên tải bản Blox Fruits mới nhất từ CDN gốc (tự gọt sạch backdoor), nếu lỗi sẽ tự fallback về bản lưu trên GitHub
+    -- [6. TẢI VÀ KÍCH HOẠT LÕI BLOX FRUITS CHUẨN 100%]
     local coreScript = nil
     
-    local success, liveScript = pcall(function()
-        return game:HttpGet("https://cdnrealkidhub.pages.dev/BloxFruits.lua")
-    end)
-    
-    if success and liveScript and #liveScript > 1000 then
-        -- Tự động gọt sạch đoạn backdoor trauroblox/anhdomixi nếu có ở đầu
-        local pos = liveScript:find("%-%- This file was protected")
-        if pos then
-            coreScript = liveScript:sub(pos)
-            print("[+] Đã tự động cập nhật bản Blox Fruits mới nhất từ Live CDN!")
-        else
-            coreScript = liveScript
+    -- Ưu tiên 1: Đọc file lõi sạch đã lưu cục bộ
+    if isfile and isfile("BloxFruits_Core.luau") then
+        coreScript = readfile("BloxFruits_Core.luau")
+    end
+
+    -- Ưu tiên 2: Tải từ GitHub Repository
+    if not coreScript or #coreScript < 1000 then
+        local ok, res = pcall(function()
+            return game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Core.luau")
+        end)
+        if ok and res and #res > 1000 then
+            coreScript = res
         end
     end
-    
-    -- Fallback về bản tĩnh trên GitHub nếu Live CDN bị chặn hoặc lỗi
+
+    -- Ưu tiên 3: Fallback lấy từ CDN gốc và gọt sạch backdoor
     if not coreScript or #coreScript < 1000 then
-        print("[*] Live CDN không phản hồi, đang chuyển sang bản lưu GitHub...")
-        if isfile and isfile("BloxFruits_Core.luau") then
-            coreScript = readfile("BloxFruits_Core.luau")
-        else
-            coreScript = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Core.luau")
+        local success, liveScript = pcall(function()
+            return game:HttpGet("https://cdnrealkidhub.pages.dev/BloxFruits.lua")
+        end)
+        if success and liveScript and #liveScript > 1000 then
+            local pos = liveScript:find("%-%- This file was protected")
+            if pos then
+                coreScript = liveScript:sub(pos)
+            else
+                coreScript = liveScript
+            end
         end
     end
 
     if coreScript and #coreScript > 100 then
         local fn, err = loadstring(coreScript)
         if fn then
+            print("[+] Kích hoạt thành công Blox Fruits Engine dưới thương hiệu CGH Hub!")
             fn()
-            print("[+] CGH Hub Blox Fruits đã kích hoạt thành công!")
         else
             warn("[!] Lỗi compile BloxFruits_Core: " .. tostring(err))
         end
     else
-        warn("[!] Không thể tải BloxFruits_Core.luau!")
+        warn("[!] Không thể nạp BloxFruits_Core.luau!")
     end
 end)
