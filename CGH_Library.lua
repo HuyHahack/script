@@ -1,13 +1,13 @@
-
-if getgenv().CGH then 
-	if game.CoreGui:FindFirstChild("CGH Hub GUI") then
+if getgenv().Nousigi or getgenv().CGH then 
+	if game.CoreGui:FindFirstChild("Nousigi Hub GUI") or game.CoreGui:FindFirstChild("CGH Hub GUI") then
 		for i, v in ipairs(game.CoreGui:GetChildren()) do
-			if string.find(v.Name,  "CGH Hub") then
+			if string.find(v.Name, "Nousigi Hub") or string.find(v.Name, "CGH Hub") then
 				v:Destroy()
 			end
 		end
 	end
 end
+getgenv().Nousigi = true
 getgenv().CGH = true
 getgenv().Config = true 
 

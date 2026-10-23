@@ -6,6 +6,20 @@
     =======================================================
 --]]
 
+local function log(msg)
+    pcall(function()
+        local formatted = os.date("[%H:%M:%S] ") .. tostring(msg)
+        if appendfile then
+            appendfile("cgh_debug.txt", formatted .. "\n")
+        elseif writefile then
+            writefile("cgh_debug.txt", formatted .. "\n")
+        end
+    end)
+    print(tostring(msg))
+end
+
+log("[+] CGH Hub Blox Fruits v2: Đang chuẩn bị môi trường...")
+
 -- [1. TỰ ĐỘNG TẢI VÀ CACHE LOGO CỜ VIỆT NAM & THƯ VIỆN UI CGH]
 pcall(function()
     if writefile and (not isfile or not isfile("cgh_logo.png")) then
@@ -40,7 +54,7 @@ task.spawn(function()
     local function cleanGuis(parent)
         if not parent then return end
         for _, gui in ipairs(parent:GetChildren()) do
-            if gui:IsA("ScreenGui") and gui.Name ~= "CGH_Auth_GUI" then
+            if gui:IsA("ScreenGui") and gui.Name ~= "CGH_Auth_GUI" and gui.Name ~= "CGH Hub GUI" and gui.Name ~= "Nousigi Hub GUI" then
                 local shouldKill = false
                 local lowerName = gui.Name:lower()
                 if lowerName:find("realkid") or lowerName:find("key") or lowerName:find("auth") then
@@ -75,7 +89,7 @@ task.spawn(function()
     end
 end)
 
--- [4. HOOK REQUEST: BẢO VỆ & TRẢ VỀ SUCCESS NẾU CÓ BẤT KỲ CUỘC GỌI AUTH NÀO]
+-- [4. HOOK REQUEST: BẢO VỆ & PHÂN LOẠI ENDPOINT CHUẨN XÁC]
 local AUTH_PAYLOAD = 'loadstring(game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua"))()'
 local function hookReq(reqFunc)
     if not reqFunc or not hookfunction then return reqFunc end
@@ -83,7 +97,8 @@ local function hookReq(reqFunc)
     orig_req = hookfunction(reqFunc, function(options)
         if type(options) == "table" and type(options.Url) == "string" then
             local url = options.Url:lower()
-            if url:find("trungdao2k4") or url:find("realkidapi") or url:find("workers.dev") then
+            -- Endpoint xác thực key: trả về payload nạp engine
+            if url:find("trungdao2k4") or (options.Body and tostring(options.Body):find("auth")) then
                 return {
                     Success = true,
                     success = true,
@@ -93,6 +108,18 @@ local function hookReq(reqFunc)
                     Headers = { ["content-type"] = "text/plain" },
                     Body = AUTH_PAYLOAD,
                     body = AUTH_PAYLOAD
+                }
+            -- Endpoint telemetry / tracker trái / boss: trả về JSON hợp lệ để không lỗi JSONDecode
+            elseif url:find("realkidapi") or url:find("workers.dev") then
+                return {
+                    Success = true,
+                    success = true,
+                    StatusCode = 200,
+                    status = 200,
+                    StatusMessage = "OK",
+                    Headers = { ["content-type"] = "application/json" },
+                    Body = '{"success":true,"status":"ok"}',
+                    body = '{"success":true,"status":"ok"}'
                 }
             end
         end
@@ -122,7 +149,7 @@ end
 local orig_loadstring
 orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
     if type(src) == "string" and (string.find(src, "Nousigi Hub") or string.find(src, "dut dit") or string.find(src, "T1UIColor") or string.find(src, "RealKid")) then
-        print("[+] Intercepted UI Library! Chuyển hướng sang CGH_Library...")
+        log("[+] Intercepted UI Library! Chuyển hướng sang CGH_Library...")
         local customLib
         if isfile and isfile("CGH_Library.lua") then
             customLib = readfile("CGH_Library.lua")
@@ -140,44 +167,56 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
 end)
 
 -- [7. KÍCH HOẠT THẲNG LÕI GAME GỐC REALKID (BYPASSED HOÀN TOÀN TẦNG KEY)]
-print("[+] CGH Hub Blox Fruits v2: Khởi động thành công! Đang nạp giao diện CGH...")
+log("[+] CGH Hub Blox Fruits v2: Đang nạp engine chính...")
 
 local coreScript = nil
 
--- Ưu tiên 1: Tải trực tiếp payload game chính từ CDN của tác giả (không chứa Blue Box Auth)
-local ok, livePayload = pcall(function()
-    return game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua")
-end)
-
-if ok and livePayload and #livePayload > 1000 then
-    coreScript = livePayload
-end
-
--- Ưu tiên 2: File lưu trong workspace
-if not coreScript or #coreScript < 1000 then
-    if isfile and isfile("BloxFruits_Core.luau") then
-        coreScript = readfile("BloxFruits_Core.luau")
+-- Ưu tiên 1: File lưu trong workspace máy
+if isfile and isfile("BloxFruits_Core.luau") then
+    local content = readfile("BloxFruits_Core.luau")
+    if content and #content > 1000 then
+        coreScript = content
+        log("[+] Đã nạp BloxFruits_Core từ workspace máy (" .. tostring(#content) .. " bytes)")
     end
 end
 
--- Ưu tiên 3: Bản lưu trên GitHub repo
+-- Ưu tiên 2: Tải từ GitHub repo chính thức
 if not coreScript or #coreScript < 1000 then
     local ok2, ghPayload = pcall(function()
         return game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Core.luau?t=" .. tostring(os.time()))
     end)
     if ok2 and ghPayload and #ghPayload > 1000 then
         coreScript = ghPayload
+        log("[+] Đã nạp BloxFruits_Core từ GitHub (" .. tostring(#ghPayload) .. " bytes)")
+    end
+end
+
+-- Ưu tiên 3: Tải trực tiếp từ CDN tác giả
+if not coreScript or #coreScript < 1000 then
+    local ok, livePayload = pcall(function()
+        return game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua")
+    end)
+    if ok and livePayload and #livePayload > 1000 then
+        coreScript = livePayload
+        log("[+] Đã nạp BloxFruits_Core từ CDN (" .. tostring(#livePayload) .. " bytes)")
     end
 end
 
 if coreScript and #coreScript > 1000 then
     local fn, err = loadstring(coreScript)
     if fn then
-        fn()
-        print("[+] CGH Hub Blox Fruits đã kích hoạt hoàn tất!")
+        log("[+] Compile mã nguồn Blox Fruits thành công! Đang thực thi...")
+        local success, runErr = xpcall(fn, function(e)
+            return tostring(e) .. "\n" .. debug.traceback()
+        end)
+        if success then
+            log("[+] CGH Hub Blox Fruits đã kích hoạt hoàn tất!")
+        else
+            log("[!] LỖI RUNTIME BLOX FRUITS: " .. tostring(runErr))
+        end
     else
-        warn("[!] Lỗi compile BloxFruits_Core: " .. tostring(err))
+        log("[!] LỖI COMPILE BLOX FRUITS: " .. tostring(err))
     end
 else
-    warn("[!] Không thể nạp mã nguồn Blox Fruits!")
+    log("[!] Không thể nạp mã nguồn Blox Fruits (file rỗng hoặc bị chặn mạng)!")
 end
