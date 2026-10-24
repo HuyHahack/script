@@ -195,21 +195,10 @@ local function hookReq(fn)
         if in_call then return orig(opt) end
         in_call = true
 
+        -- Cho phep cac request API hop server di qua tu nhien de RealKidHop hoat dong
         if type(opt) == "table" then
             local url = tostring(opt.Url or opt.url or ""):lower()
-            if url:find("realkidapi") then
-                in_call = false
-                local okJson = '{"success":true,"status":"ok"}'
-                return {
-                    Success = true, success = true,
-                    StatusCode = 200, status_code = 200,
-                    Status = 200, status = 200,
-                    StatusMessage = "OK", status_message = "OK",
-                    Headers = { ["content-type"] = "application/json" },
-                    headers = { ["content-type"] = "application/json" },
-                    Body = okJson, body = okJson
-                }
-            end
+            -- Khong chan realkidapi nua de nhan danh sach server hop
         end
 
         local res = orig(opt)
