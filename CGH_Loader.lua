@@ -9,63 +9,6 @@
 --]]
 
 print("=======================================================")
-
--- [0. TỰ ĐỘNG BẢO ĐẢM KEY BẢN QUYỀN - KEYLESS 100% VĨNH VIỄN]
-local REAL_MASTER_KEY = "TRAU_4D0281B6EB4A9BFDD18753A4B92860F9716BC4C439E1C448"
-
-local function autoInjectKeyFiles()
-    local keyFiles = {
-        "TrauHub_Save.txt",
-        "CGH_Key.txt",
-        "teddy_key_gay.txt",
-        "RealKid_Key_" .. tostring(game.PlaceId) .. ".txt",
-        "RealKid_Key_100117331123089.txt",
-        "RealKid_Key_11348033272.txt",
-        "RealKid_Key_11584810072.txt",
-        "RealKid_Key_2753915549.txt",
-        "RealKid_Key_4442272183.txt",
-        "RealKid_Key_7449423635.txt",
-        "RealKid_Key_79091703265657.txt"
-    }
-    for _, fname in ipairs(keyFiles) do
-        pcall(function()
-            if writefile then
-                writefile(fname, REAL_MASTER_KEY)
-            end
-        end)
-    end
-end
-autoInjectKeyFiles()
-
--- Tự động dập tắt và xác thực bất kỳ bảng Key GUI nào nếu xuất hiện
-task.spawn(function()
-    local Players = game:GetService("Players")
-    local lp = Players.LocalPlayer or Players.PlayerAdded:Wait()
-    local pGui = lp:WaitForChild("PlayerGui", 10)
-    if pGui then
-        pGui.ChildAdded:Connect(function(child)
-            if child.Name == "TrauHubKeySystem" or child.Name:find("Key") then
-                task.defer(function()
-                    pcall(function()
-                        local keyInput = child:FindFirstChild("KeyInput", true)
-                        local checkBtn = child:FindFirstChild("CheckKeyBtn", true) or child:FindFirstChild("KIỂM TRA", true)
-                        if keyInput and keyInput:IsA("TextBox") then
-                            keyInput.Text = REAL_MASTER_KEY
-                        end
-                        if checkBtn and checkBtn:IsA("TextButton") then
-                            if getconnections then
-                                for _, c in ipairs(getconnections(checkBtn.MouseButton1Click) or {}) do
-                                    c:Fire()
-                                end
-                            end
-                        end
-                    end)
-                end)
-            end
-        end)
-    end
-end)
-
 print("            CGH HUB - BLOX FRUITS (KEYLESS)            ")
 print("          Khoi chay he thong Blox Fruits v3...         ")
 print("=======================================================")
@@ -99,13 +42,6 @@ pcall(function()
     end
 end)
 
-pcall(function()
-    if writefile and (not isfile or not isfile("BloxFruits_Core.luau")) then
-        local coreData = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Core.luau?t=" .. tostring(os.time()))
-        writefile("BloxFruits_Core.luau", coreData)
-    end
-end)
-
 -- [3. HOOK SERVER HOP & QUEUE_ON_TELEPORT: CHỐNG BỊ VĂNG VỀ REALKID GỐC]
 local CGH_TELEPORT_PERSIST = [=[
     repeat task.wait() until game:IsLoaded()
@@ -131,12 +67,10 @@ local function applyCGHQueue()
     end
 end
 
--- Hook trực tiếp hàm queue_on_teleport của executor
 pcall(function()
     local orig_q = getQOT()
     if orig_q and hookfunction then
         hookfunction(orig_q, function(script_str)
-            -- Bất kỳ script nào (kể cả RealKid gốc) gọi queue_on_teleport thì đều bị tráo bằng CGH_Loader
             return orig_q(CGH_TELEPORT_PERSIST)
         end)
     end
@@ -153,7 +87,6 @@ pcall(function()
     queueonteleport = cgh_qot
 end)
 
--- Lắng nghe sự kiện người chơi chuẩn bị dịch chuyển / nhảy server
 pcall(function()
     local Players = game:GetService("Players")
     local lp = Players.LocalPlayer or Players.PlayerAdded:Wait()
@@ -164,7 +97,6 @@ pcall(function()
     end
 end)
 
--- Hook TeleportService để luôn nạp CGH_Loader trước khi đổi server
 pcall(function()
     local TeleportService = game:GetService("TeleportService")
     local tpMethods = {"Teleport", "TeleportToPlaceInstance", "TeleportPartyAsync", "TeleportToSpawnByName"}
@@ -179,7 +111,6 @@ pcall(function()
     end
 end)
 
--- Nạp sẵn 1 lần phòng trường hợp hop server bất ngờ
 applyCGHQueue()
 
 -- [3.5. HOOK STARTERGUI NOTIFICATION: CHUYEN HOAN TOAN NOTIFICATION SANG CGH HUB]
@@ -213,7 +144,7 @@ if setclipboard then
     end
 end
 
--- [5. HOOK GAME:HTTPGET: CHUYỂN HƯỚNG MỌI CUỘC GỌI ANHDOMIXI / CORE SANG FILE MÁY]
+-- [5. HOOK GAME:HTTPGET: CHUYỂN HƯỚNG MỌI CUỘC GỌI ANHDOMIXI SANG FILE MÁY]
 pcall(function()
     if hookfunction and game and game.HttpGet then
         local orig_httpget
@@ -224,10 +155,6 @@ pcall(function()
                     if isfile and isfile("anhdomixi.lua") then
                         return readfile("anhdomixi.lua")
                     end
-                elseif (lurl:find("bloxfruits%.lua") or lurl:find("bloxfruits")) and not lurl:find("cgh") then
-                    if isfile and isfile("BloxFruits_Core.luau") then
-                        return readfile("BloxFruits_Core.luau")
-                    end
                 end
             end
             return orig_httpget(self, url, ...)
@@ -235,75 +162,7 @@ pcall(function()
     end
 end)
 
-if hookmetamethod then
-    local orig_nc
-    orig_nc = hookmetamethod(game, "__namecall", function(self, ...)
-        local method = getnamecallmethod()
-        if method == "HttpGet" or method == "httpGet" or method == "HttpGetAsync" then
-            local args = {...}
-            local url = args[1]
-            if type(url) == "string" then
-                local lurl = url:lower()
-                if lurl:find("anhdomixi") or lurl:find("traurobloxdeptrai") then
-                    if isfile and isfile("anhdomixi.lua") then
-                        return readfile("anhdomixi.lua")
-                    end
-                elseif (lurl:find("bloxfruits%.lua") or lurl:find("bloxfruits")) and not lurl:find("cgh") then
-                    if isfile and isfile("BloxFruits_Core.luau") then
-                        return readfile("BloxFruits_Core.luau")
-                    end
-                end
-            end
-        end
-        return orig_nc(self, ...)
-    end)
-end
-
--- [6. HOOK REQUEST: BỎ QUA TELEMETRY SERVER ĐÃ CHẾT ĐỂ CHỐNG TREO]
-local hooked_fns = {}
-local function hookReq(fn)
-    if not fn or type(fn) ~= "function" or hooked_fns[fn] or not hookfunction then return fn end
-    hooked_fns[fn] = true
-
-    local in_call = false
-    local orig
-    orig = hookfunction(fn, function(opt)
-        if in_call then return orig(opt) end
-        in_call = true
-
-        -- Cho phep cac request API hop server di qua tu nhien de RealKidHop hoat dong
-        if type(opt) == "table" then
-            local url = tostring(opt.Url or opt.url or ""):lower()
-            -- Bắt xác thực key của Cloudflare Workers -> Luôn tiêm Master Key hợp lệ vào payload
-            if url:find("webhook%.trungdao2k4") or url:find("workers%.dev") then
-                pcall(function()
-                    local HttpService = game:GetService("HttpService")
-                    local b = opt.Body or opt.body
-                    if type(b) == "string" and #b > 0 then
-                        local d = HttpService:JSONDecode(b)
-                        d.key = "TRAU_4D0281B6EB4A9BFDD18753A4B92860F9716BC4C439E1C448"
-                        local nb = HttpService:JSONEncode(d)
-                        opt.Body = nb
-                        if opt.body then opt.body = nb end
-                    end
-                end)
-                print("[+] CGH Keyless: Tu dong xac thuc ban quyen voi Cloudflare...")
-            end
-        end
-
-        local res = orig(opt)
-        in_call = false
-        return res
-    end)
-    return orig
-end
-
-pcall(function() if request then hookReq(request) end end)
-pcall(function() if http_request then hookReq(http_request) end end)
-pcall(function() if syn and syn.request then hookReq(syn.request) end end)
-pcall(function() if http and http.request then hookReq(http.request) end end)
-
--- [7. HOOK LOADSTRING: TỰ ĐỘNG BỌC GIAO DIỆN CGH_LIBRARY CỜ VIỆT NAM]
+-- [6. HOOK LOADSTRING: TỰ ĐỘNG BỌC GIAO DIỆN CGH_LIBRARY CỜ VIỆT NAM]
 local in_loadstring = false
 local orig_loadstring
 orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
@@ -336,66 +195,40 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
     end
 end)
 
--- [8. KHỞI CHẠY ENGINE BLOX FRUITS GỐC 1.5MB (HOÀN TOÀN KHÔNG CẦN KEY)]
-print("[+] Dang nap engine Blox Fruits 1.5MB...")
-
-local coreScript = nil
-if isfile and isfile("BloxFruits_Core.luau") then
-    local c = readfile("BloxFruits_Core.luau")
+-- [7. KHỞI CHẠY TRỰC TIẾP ENGINE TÍNH NĂNG BLOX FRUITS (HOÀN TOÀN KHÔNG CÓ BẢNG KEY)]
+print("[+] Dang nap Blox Fruits Features Engine...")
+local farmScript = nil
+if isfile and isfile("anhdomixi.lua") then
+    local c = readfile("anhdomixi.lua")
     if c and #c > 1000 then
-        coreScript = c
-        print("[+] Da nap BloxFruits_Core tu workspace (" .. tostring(#c) .. " bytes)")
+        farmScript = c
+        print("[+] Da nap Blox Fruits Features tu workspace (" .. tostring(#c) .. " bytes)")
     end
 end
 
-if not coreScript or #coreScript < 1000 then
+if not farmScript or #farmScript < 1000 then
     local ok, liveScript = pcall(function()
-        return game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Core.luau?t=" .. tostring(os.time()))
+        return game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua")
     end)
     if ok and liveScript and #liveScript > 1000 then
-        coreScript = liveScript
-        print("[+] Da nap BloxFruits_Core tu GitHub (" .. tostring(#liveScript) .. " bytes)")
+        farmScript = liveScript
+        print("[+] Da nap Blox Fruits Features tu CDN (" .. tostring(#liveScript) .. " bytes)")
     end
 end
 
-if coreScript and #coreScript > 100 then
-    local fn, err = loadstring(coreScript)
+if farmScript and #farmScript > 100 then
+    local fn, err = loadstring(farmScript)
     if fn then
-        print("[+] Bat dau thuc thi Blox Fruits engine...")
+        print("[+] Bat dau thuc thi CGH HUB Blox Fruits...")
         task.spawn(function()
             local ok, runErr = pcall(fn)
             if not ok then
-                warn("[!] Runtime BloxFruits_Core: " .. tostring(runErr))
+                warn("[!] Runtime Blox Fruits Features: " .. tostring(runErr))
             end
         end)
     else
-        warn("[!] Compile BloxFruits_Core: " .. tostring(err))
+        warn("[!] Compile Blox Fruits Features: " .. tostring(err))
     end
 else
-    warn("[!] Khong the doc BloxFruits_Core.luau!")
+    warn("[!] Khong the doc anhdomixi.lua!")
 end
-
--- [9. FAIL-SAFE: TỰ ĐỘNG KÍCH HOẠT GIAO DIỆN & TÍNH NĂNG NẾU ENGINE CHẬM]
-task.delay(1.5, function()
-    local cg = game:GetService("CoreGui")
-    if not cg:FindFirstChild("CGH Hub GUI") and not cg:FindFirstChild("Nousigi Hub GUI") then
-        print("[+] Fail-safe: Nap truc tiep Blox Fruits UI & Features...")
-        local sCode = nil
-        if isfile and isfile("anhdomixi.lua") then
-            sCode = readfile("anhdomixi.lua")
-        else
-            sCode = game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua")
-        end
-        if sCode and #sCode > 100 then
-            local uifn, uierr = loadstring(sCode)
-            if uifn then
-                task.spawn(uifn)
-                print("[+] CGH Hub Blox Fruits da khoi dong thanh cong!")
-            else
-                warn("[!] Loi khoi dong UI: " .. tostring(uierr))
-            end
-        end
-    else
-        print("[+] CGH Hub GUI da xuat hien tren man hinh thanh cong!")
-    end
-end)
