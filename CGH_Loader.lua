@@ -125,6 +125,25 @@ end)
 -- Nạp sẵn 1 lần phòng trường hợp hop server bất ngờ
 applyCGHQueue()
 
+-- [3.5. HOOK STARTERGUI NOTIFICATION: CHUYEN HOAN TOAN NOTIFICATION SANG CGH HUB]
+pcall(function()
+    local StarterGui = game:GetService("StarterGui")
+    if hookfunction and StarterGui and StarterGui.SetCore then
+        local orig_setcore
+        orig_setcore = hookfunction(StarterGui.SetCore, function(self, name, data, ...)
+            if name == "SendNotification" and type(data) == "table" then
+                if data.Title then
+                    data.Title = tostring(data.Title):gsub("RealKid", "CGH Hub"):gsub("realkid", "CGH Hub"):gsub("Nousigi", "CGH Hub")
+                end
+                if data.Text then
+                    data.Text = tostring(data.Text):gsub("RealKid", "CGH Hub"):gsub("realkid", "CGH Hub"):gsub("Nousigi", "CGH Hub")
+                end
+            end
+            return orig_setcore(self, name, data, ...)
+        end)
+    end
+end)
+
 -- [4. HOOK SETCLIPBOARD: LINK RICKROLL]
 local RICK_ROLL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 if setclipboard then

@@ -37,7 +37,7 @@ local T1UIColor = {
 	["Section Text Color"] = Color3.fromRGB(220, 220, 210),
 	["Section Underline Color"] = Color3.fromRGB(220, 20, 40),
 	["Toggle Border Color"] = Color3.fromRGB(220, 20, 40),
-	["Toggle Checked Color"] = Color3.fromRGB(230, 230, 230),
+	["Toggle Checked Color"] = Color3.fromRGB(255, 215, 0),
 	["Toggle Desc Color"] = Color3.fromRGB(185, 185, 185),
 	["Button Color"] = Color3.fromRGB(220, 20, 40),
 	["Label Color"] = Color3.fromRGB(38, 38, 42),
@@ -279,8 +279,11 @@ function Library_Function.Getcolor(color)
 end
 
 local libCreateNoti = function(Setting)
-	getgenv().TitleNameNoti = Setting.Title or ""
-	local Description = Setting.Description or Setting.Desc or Setting.Content or ""
+    Setting = Setting or {}
+    local rawTitle = tostring(Setting.Title or ""):gsub("RealKid", "CGH"):gsub("realkid", "CGH"):gsub("Nousigi", "CGH")
+    getgenv().TitleNameNoti = rawTitle
+	local rawDesc = tostring(Setting.Description or Setting.Desc or Setting.Content or ""):gsub("RealKid", "CGH"):gsub("realkid", "CGH"):gsub("Nousigi", "CGH")
+	local Description = rawDesc
 	local Duration = Setting.Duration or Setting.Timeshow or Setting.Delay or 10
 
 	local NotiFrame = Instance.new("Frame")
@@ -336,7 +339,7 @@ local libCreateNoti = function(Setting)
 	local colorG = tostring(Library_Function.Getcolor(getgenv().UIColor['Title Text Color'])[2])
 	local colorB = tostring(Library_Function.Getcolor(getgenv().UIColor['Title Text Color'])[3])
 	local color = colorR .. ',' .. colorG .. ',' .. colorB
-    TextLabelNoti.Text = "<font color=\"rgb(" .. tostring(color or "255,206,27") .. ")\">" .. tostring("RealKid Hub") .. "</font> " .. tostring(getgenv().TitleNameNoti or "")
+    TextLabelNoti.Text = "<font color=\"rgb(" .. tostring(color or "255,206,27") .. ")\">" .. tostring("CGH Hub") .. "</font> " .. tostring(getgenv().TitleNameNoti or "")
     
 	TextLabelNoti.Name = "TextLabelNoti"
 	TextLabelNoti.Parent = Topnoti
@@ -432,6 +435,12 @@ local libCreateNoti = function(Setting)
 end
 
 function Library:Notify(Setting, bypass)
+    if type(Setting) == "table" then
+        if Setting.Title then Setting.Title = tostring(Setting.Title):gsub("RealKid", "CGH"):gsub("realkid", "CGH"):gsub("Nousigi", "CGH") end
+        if Setting.Desc then Setting.Desc = tostring(Setting.Desc):gsub("RealKid", "CGH"):gsub("realkid", "CGH"):gsub("Nousigi", "CGH") end
+        if Setting.Description then Setting.Description = tostring(Setting.Description):gsub("RealKid", "CGH"):gsub("realkid", "CGH"):gsub("Nousigi", "CGH") end
+        if Setting.Content then Setting.Content = tostring(Setting.Content):gsub("RealKid", "CGH"):gsub("realkid", "CGH"):gsub("Nousigi", "CGH") end
+    end
 	if getgenv().Config or bypass then
 		local s, e = pcall(function()
 			libCreateNoti(Setting)
@@ -633,7 +642,7 @@ function Library:CreateWindow(Setting)
 	local colorG = tostring(Library_Function.Getcolor(getgenv().UIColor['Title Text Color'])[2])
 	local colorB = tostring(Library_Function.Getcolor(getgenv().UIColor['Title Text Color'])[3])
 	local color = colorR .. ',' .. colorG .. ',' .. colorB
-    TextLabelMain.Text = "<font color=\"rgb(" .. tostring(color or "255,206,27") .. ")\">" .. tostring(TitleNameMain or "RealKid Hub") .. "</font> " .. tostring(getgenv().MainDesc or "")
+    TextLabelMain.Text = "<font color=\"rgb(" .. tostring(color or "255,206,27") .. ")\">" .. tostring(TitleNameMain or "CGH Hub") .. "</font> " .. tostring(getgenv().MainDesc or "")
 
 	PageControl.Name = "Background1"
 	PageControl.Parent = Concacmain
@@ -1391,7 +1400,7 @@ function Library:CreateWindow(Setting)
 				check.Name = "check"
 				check.Parent = checkbox
 				check.AnchorPoint = Vector2.new(0.5, 0.5)
-				check.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+				check.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
 				check.Position = UDim2.new(0.5, 0, 0.5, 0)
 				local cac = 5
 				if Desc then
@@ -1592,10 +1601,10 @@ function Library:CreateWindow(Setting)
 				 
 				 UIGradient_1.Parent = ClickArea_1
 				 UIGradient_1.Color = ColorSequence.new{
-					 ColorSequenceKeypoint.new(0, Color3.fromRGB(77, 196, 255)), 
-					 ColorSequenceKeypoint.new(0.4, Color3.fromRGB(0, 170, 255)), 
-					 ColorSequenceKeypoint.new(0.6, Color3.fromRGB(0, 140, 220)), 
-					 ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 110, 190))
+					 ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 235, 120)), 
+					 ColorSequenceKeypoint.new(0.4, Color3.fromRGB(255, 204, 0)), 
+					 ColorSequenceKeypoint.new(0.6, Color3.fromRGB(230, 170, 0)), 
+					 ColorSequenceKeypoint.new(1, Color3.fromRGB(200, 140, 0))
 				 }
 				 UIGradient_1.Rotation = 90
 				 
