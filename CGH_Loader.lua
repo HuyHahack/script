@@ -1,8 +1,9 @@
 --[[
     =======================================================
                      CGH HUB - BLOX FRUITS
-                 PHIÊN BẢN ĐỘC QUYỀN (KEYLESS)
+                 PHIÊN BẢN ĐẶC QUYỀN (KEYLESS)
                Vĩnh viễn không cần Key - 1 Click Run
+               Tự động duy trì khi Hop / Rejoin Server
            Repository: https://github.com/HuyHahack/script
     =======================================================
 --]]
@@ -48,7 +49,83 @@ pcall(function()
     end
 end)
 
--- [3. HOOK SETCLIPBOARD: LINK RICKROLL]
+-- [3. HOOK SERVER HOP & QUEUE_ON_TELEPORT: CHỐNG BỊ VĂNG VỀ REALKID GỐC]
+local CGH_TELEPORT_PERSIST = [=[
+    repeat task.wait() until game:IsLoaded()
+    pcall(function()
+        if isfile and isfile("CGH_Loader.lua") then
+            loadstring(readfile("CGH_Loader.lua"))()
+        else
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Loader.lua?t=" .. tostring(os.time())))()
+        end
+    end)
+]=]
+
+local function getQOT()
+    return queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or queueonteleport
+end
+
+local function applyCGHQueue()
+    local q = getQOT()
+    if q then
+        pcall(function()
+            q(CGH_TELEPORT_PERSIST)
+        end)
+    end
+end
+
+-- Hook trực tiếp hàm queue_on_teleport của executor
+pcall(function()
+    local orig_q = getQOT()
+    if orig_q and hookfunction then
+        hookfunction(orig_q, function(script_str)
+            -- Bất kỳ script nào (kể cả RealKid gốc) gọi queue_on_teleport thì đều bị tráo bằng CGH_Loader
+            return orig_q(CGH_TELEPORT_PERSIST)
+        end)
+    end
+    
+    local cgh_qot = function(str)
+        local raw = getQOT()
+        if raw then
+            return raw(CGH_TELEPORT_PERSIST)
+        end
+    end
+    queue_on_teleport = cgh_qot
+    if syn then syn.queue_on_teleport = cgh_qot end
+    if fluxus then fluxus.queue_on_teleport = cgh_qot end
+    queueonteleport = cgh_qot
+end)
+
+-- Lắng nghe sự kiện người chơi chuẩn bị dịch chuyển / nhảy server
+pcall(function()
+    local Players = game:GetService("Players")
+    local lp = Players.LocalPlayer or Players.PlayerAdded:Wait()
+    if lp then
+        lp.OnTeleport:Connect(function(state)
+            applyCGHQueue()
+        end)
+    end
+end)
+
+-- Hook TeleportService để luôn nạp CGH_Loader trước khi đổi server
+pcall(function()
+    local TeleportService = game:GetService("TeleportService")
+    local tpMethods = {"Teleport", "TeleportToPlaceInstance", "TeleportPartyAsync", "TeleportToSpawnByName"}
+    for _, method in ipairs(tpMethods) do
+        if TeleportService[method] and hookfunction then
+            local orig_method
+            orig_method = hookfunction(TeleportService[method], function(self, ...)
+                applyCGHQueue()
+                return orig_method(self, ...)
+            end)
+        end
+    end
+end)
+
+-- Nạp sẵn 1 lần phòng trường hợp hop server bất ngờ
+applyCGHQueue()
+
+-- [4. HOOK SETCLIPBOARD: LINK RICKROLL]
 local RICK_ROLL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 if setclipboard then
     local orig_setclipboard = setclipboard
@@ -60,7 +137,7 @@ if setclipboard then
     end
 end
 
--- [4. HOOK GAME:HTTPGET: CHUYỂN HƯỚNG MỌI CUỘC GỌI ANHDOMIXI / CORE SANG FILE MÁY]
+-- [5. HOOK GAME:HTTPGET: CHUYỂN HƯỚNG MỌI CUỘC GỌI ANHDOMIXI / CORE SANG FILE MÁY]
 pcall(function()
     if hookfunction and game and game.HttpGet then
         local orig_httpget
@@ -71,7 +148,7 @@ pcall(function()
                     if isfile and isfile("anhdomixi.lua") then
                         return readfile("anhdomixi.lua")
                     end
-                elseif lurl:find("bloxfruits%.lua") and not lurl:find("cgh") then
+                elseif (lurl:find("bloxfruits%.lua") or lurl:find("bloxfruits")) and not lurl:find("cgh") then
                     if isfile and isfile("BloxFruits_Core.luau") then
                         return readfile("BloxFruits_Core.luau")
                     end
@@ -95,7 +172,7 @@ if hookmetamethod then
                     if isfile and isfile("anhdomixi.lua") then
                         return readfile("anhdomixi.lua")
                     end
-                elseif lurl:find("bloxfruits%.lua") and not lurl:find("cgh") then
+                elseif (lurl:find("bloxfruits%.lua") or lurl:find("bloxfruits")) and not lurl:find("cgh") then
                     if isfile and isfile("BloxFruits_Core.luau") then
                         return readfile("BloxFruits_Core.luau")
                     end
@@ -106,7 +183,7 @@ if hookmetamethod then
     end)
 end
 
--- [5. HOOK REQUEST: BỎ QUA TELEMETRY SERVER ĐÃ CHẾT ĐỂ CHỐNG TREO]
+-- [6. HOOK REQUEST: BỎ QUA TELEMETRY SERVER ĐÃ CHẾT ĐỂ CHỐNG TREO]
 local hooked_fns = {}
 local function hookReq(fn)
     if not fn or type(fn) ~= "function" or hooked_fns[fn] or not hookfunction then return fn end
@@ -147,7 +224,7 @@ pcall(function() if http_request then hookReq(http_request) end end)
 pcall(function() if syn and syn.request then hookReq(syn.request) end end)
 pcall(function() if http and http.request then hookReq(http.request) end end)
 
--- [6. HOOK LOADSTRING: TỰ ĐỘNG BỌC GIAO DIỆN CGH_LIBRARY CỜ VIỆT NAM]
+-- [7. HOOK LOADSTRING: TỰ ĐỘNG BỌC GIAO DIỆN CGH_LIBRARY CỜ VIỆT NAM]
 local in_loadstring = false
 local orig_loadstring
 orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
@@ -180,7 +257,7 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
     end
 end)
 
--- [7. KHỞI CHẠY ENGINE BLOX FRUITS GỐC 1.5MB (HOÀN TOÀN KHÔNG CẦN KEY)]
+-- [8. KHỞI CHẠY ENGINE BLOX FRUITS GỐC 1.5MB (HOÀN TOÀN KHÔNG CẦN KEY)]
 print("[+] Dang nap engine Blox Fruits 1.5MB...")
 
 local coreScript = nil
@@ -219,7 +296,7 @@ else
     warn("[!] Khong the doc BloxFruits_Core.luau!")
 end
 
--- [8. FAIL-SAFE: TỰ ĐỘNG KÍCH HOẠT GIAO DIỆN & TÍNH NĂNG NẾU ENGINE CHẬM]
+-- [9. FAIL-SAFE: TỰ ĐỘNG KÍCH HOẠT GIAO DIỆN & TÍNH NĂNG NẾU ENGINE CHẬM]
 task.delay(1.5, function()
     local cg = game:GetService("CoreGui")
     if not cg:FindFirstChild("CGH Hub GUI") and not cg:FindFirstChild("Nousigi Hub GUI") then
