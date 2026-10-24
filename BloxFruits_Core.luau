@@ -1,9 +1,15 @@
 task.spawn(function()
     pcall(function()
-        if isfile and isfile("anhdomixi.lua") then
-            loadstring(readfile("anhdomixi.lua"))()
+        if isfile and isfile("BloxFruits_Engine.luau") then
+            loadstring(readfile("BloxFruits_Engine.luau"))()
         else
-            loadstring(game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua"))()
+            local s = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Engine.luau")
+            if s and #s > 1000 then
+                if writefile then pcall(writefile, "BloxFruits_Engine.luau", s) end
+                loadstring(s)()
+            else
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/traurobloxdeptrai/traukhoaito/refs/heads/main/anhdomixi"))()
+            end
         end
     end)
 end)

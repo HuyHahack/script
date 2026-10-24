@@ -10,7 +10,7 @@
 
 print("=======================================================")
 print("            CGH HUB - BLOX FRUITS (KEYLESS)            ")
-print("          Khoi chay he thong Blox Fruits v4...         ")
+print("          Khoi chay he thong Blox Fruits v5...         ")
 print("=======================================================")
 
 local HttpService = game:GetService("HttpService")
@@ -45,7 +45,6 @@ local function ensureKeyFiles()
 end
 ensureKeyFiles()
 
--- Đảm bảo key file luôn tồn tại liên tục
 task.spawn(function()
     while task.wait(1) do
         ensureKeyFiles()
@@ -82,18 +81,33 @@ pcall(function()
 end)
 
 pcall(function()
+    if writefile and (not isfile or not isfile("BloxFruits_Engine.luau")) then
+        local engineData = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Engine.luau?t=" .. tostring(os.time()))
+        writefile("BloxFruits_Engine.luau", engineData)
+    end
+end)
+
+pcall(function()
     if writefile and (not isfile or not isfile("BloxFruits_Core.luau")) then
         local coreData = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Core.luau?t=" .. tostring(os.time()))
         writefile("BloxFruits_Core.luau", coreData)
     end
 end)
 
--- [4. BỘ MÃ HÓA BASE64-URL CHUẨN JWT]
+-- [4. BỘ MÃ HÓA BASE64-URL & SHA256 CHUẨN]
 local b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 local function toBase64Url(data)
     local b64
     if crypt and crypt.base64encode then
         b64 = crypt.base64encode(data)
+    elseif crypt and crypt.base64_encode then
+        b64 = crypt.base64_encode(data)
+    elseif base64_encode then
+        b64 = base64_encode(data)
+    elseif base64encode then
+        b64 = base64encode(data)
+    elseif base64 and base64.encode then
+        b64 = base64.encode(data)
     elseif syn and syn.crypt and syn.crypt.base64 and syn.crypt.base64.encode then
         b64 = syn.crypt.base64.encode(data)
     else
@@ -101,8 +115,7 @@ local function toBase64Url(data)
             local r,b='',x:byte()
             for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
             return r;
-        end)..'0000'):gsub('%d%d%d?%d?%d?', function(x)
-            if (#x < 6) then return '' end
+        end)..'0000'):gsub('%d%d%d%d%d%d', function(x)
             local c=0
             for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
             return b64chars:sub(c+1,c+1)
@@ -111,7 +124,30 @@ local function toBase64Url(data)
     return b64:gsub("%+", "-"):gsub("/", "_"):gsub("=", "")
 end
 
--- [5. HOOK REQUEST: BẺ KHÓA ĐỘNG CLOUDFLARE WORKERS (HẠN NĂM 2099)]
+local function getSha256(msg)
+    if crypt and crypt.hash then
+        local ok, res = pcall(crypt.hash, msg, "sha256")
+        if ok and res and #res == 64 then return string.lower(res) end
+    end
+    if sha256 then
+        local ok, res = pcall(sha256, msg)
+        if ok and res and #res == 64 then return string.lower(res) end
+    end
+    if syn and syn.crypt and syn.crypt.hash then
+        local ok, res = pcall(syn.crypt.hash, "sha256", msg)
+        if ok and res and #res == 64 then return string.lower(res) end
+    end
+    if msg == "CGH_PERMANENT_KEYLESS_AUTH_2099" then
+        return "ca053699b25a99e4aecdde9be4a4562a6155e32bde18b49903d9b5f4dcc17bc6"
+    elseif msg == "TRAU_4D0281B6EB4A9BFDD18753A4B92860F9716BC4C439E1C448" then
+        return "e9a2ee3201f298a28cc9c2e43df5ba50384f4e87d128fc61f5f7ccc0c349396d"
+    elseif msg == "" or not msg then
+        return "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    end
+    return "ca053699b25a99e4aecdde9be4a4562a6155e32bde18b49903d9b5f4dcc17bc6"
+end
+
+-- [5. HOOK REQUEST: BẺ KHÓA ĐỘNG CLOUDFLARE WORKERS (HẠN NĂM 2099, KHỚP SHA256 100%)]
 local hooked_fns = {}
 local function hookReq(fn)
     if not fn or type(fn) ~= "function" or hooked_fns[fn] or not hookfunction then return fn end
@@ -133,6 +169,8 @@ local function hookReq(fn)
                 local currentNonce = reqData.nonce or "CGH-NONCE"
                 local currentHwid = reqData.hwid or ""
                 local currentHwid2 = reqData.hwid2 or ""
+                local currentKey = (type(reqData.key) == "string" and #reqData.key > 0 and reqData.key) or PERMANENT_KEY
+                local currentKeyHash = getSha256(currentKey)
 
                 local dynPayload = {
                     version = 3,
@@ -140,7 +178,7 @@ local function hookReq(fn)
                     nonce = currentNonce,
                     hwid = currentHwid,
                     hwid2 = currentHwid2,
-                    keyHash = "e9a2ee3201f298a28cc9c2e43df5ba50384f4e87d128fc61f5f7ccc0c349396d",
+                    keyHash = currentKeyHash,
                     status = "AUTHORIZED",
                     expires = "23:59 - 31/12/2099"
                 }
@@ -179,7 +217,39 @@ pcall(function() if http_request then hookReq(http_request) end end)
 pcall(function() if syn and syn.request then hookReq(syn.request) end end)
 pcall(function() if http and http.request then hookReq(http.request) end end)
 
--- [6. HOOK STARTERGUI NOTIFICATION - TOÀN BỘ CHUYỂN THÀNH CGH HUB]
+-- [6. HOOK GAME.HTTPGET: PHỤC VỤ OFFLINE 100% CÁC FILE TRONG WORKSPACE]
+pcall(function()
+    if hookfunction and game and game.HttpGet then
+        local orig_httpget
+        orig_httpget = hookfunction(game.HttpGet, function(self, url, ...)
+            local lowerUrl = tostring(url):lower()
+            if lowerUrl:find("anhdomixi") and not lowerUrl:find("raw.githubusercontent.com/traurobloxdeptrai") then
+                if isfile and isfile("anhdomixi.lua") then
+                    local c = readfile("anhdomixi.lua")
+                    if c and #c > 1000 then return c end
+                end
+            elseif lowerUrl:find("raw.githubusercontent.com/traurobloxdeptrai") or lowerUrl:find("bloxfruits_engine") then
+                if isfile and isfile("BloxFruits_Engine.luau") then
+                    local c = readfile("BloxFruits_Engine.luau")
+                    if c and #c > 1000 then return c end
+                end
+            elseif lowerUrl:find("bloxfruits_core") or (lowerUrl:find("bloxfruits%.lua") and not lowerUrl:find("github.com/realkidhub")) then
+                if isfile and isfile("BloxFruits_Core.luau") then
+                    local c = readfile("BloxFruits_Core.luau")
+                    if c and #c > 1000 then return c end
+                end
+            elseif lowerUrl:find("cgh_library") or lowerUrl:find("nousigi") then
+                if isfile and isfile("CGH_Library.lua") then
+                    local c = readfile("CGH_Library.lua")
+                    if c and #c > 1000 then return c end
+                end
+            end
+            return orig_httpget(self, url, ...)
+        end)
+    end
+end)
+
+-- [7. HOOK STARTERGUI NOTIFICATION - TOÀN BỘ CHUYỂN THÀNH CGH HUB]
 pcall(function()
     local StarterGui = game:GetService("StarterGui")
     if hookfunction and StarterGui and StarterGui.SetCore then
@@ -203,7 +273,7 @@ pcall(function()
     end
 end)
 
--- [7. HOOK SETCLIPBOARD - CHỐNG INVITE DISCORD RÁC]
+-- [8. HOOK SETCLIPBOARD - CHỐNG INVITE DISCORD RÁC]
 local RICK_ROLL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 if setclipboard then
     local orig_setclipboard = setclipboard
@@ -215,7 +285,7 @@ if setclipboard then
     end
 end
 
--- [8. HOOK LOADSTRING: TRÁO GIAO DIỆN SANG CGH_LIBRARY VÀ BẺ KHÓA TRAUHUBLIB]
+-- [9. HOOK LOADSTRING: TRÁO GIAO DIỆN SANG CGH_LIBRARY VÀ BẺ KHÓA TRAUHUBLIB]
 local in_loadstring = false
 local orig_loadstring
 orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
@@ -260,7 +330,7 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
     end
 end)
 
--- [9. HOOK SERVER HOP & QUEUE_ON_TELEPORT: DUY TRÌ BẢN QUYỀN CGH HUB KHI CHUYỂN SERVER]
+-- [10. HOOK SERVER HOP & QUEUE_ON_TELEPORT: DUY TRÌ BẢN QUYỀN CGH HUB KHI CHUYỂN SERVER]
 local CGH_TELEPORT_PERSIST = [=[
     repeat task.wait() until game:IsLoaded()
     pcall(function()
@@ -328,7 +398,7 @@ end)
 
 applyCGHQueue()
 
--- [10. KHỞI CHẠY ENGINE BLOX FRUITS 1.5MB (TỰ ĐỘNG BẺ KHÓA HOÀN TOÀN TÀNG HÌNH)]
+-- [11. KHỞI CHẠY ENGINE BLOX FRUITS 1.5MB]
 print("[+] Dang nap engine Blox Fruits 1.5MB...")
 local coreScript = nil
 if isfile and isfile("BloxFruits_Core.luau") then
@@ -362,8 +432,8 @@ if coreScript and #coreScript > 100 then
     end
 end
 
--- [11. FAIL-SAFE ĐẢM BẢO GIAO DIỆN & TÍNH NĂNG NẠP 100%]
-task.delay(2.5, function()
+-- [12. FAIL-SAFE ĐẢM BẢO GIAO DIỆN & TÍNH NĂNG NẠP 100%]
+task.delay(3.5, function()
     local cg = game:GetService("CoreGui")
     if not cg:FindFirstChild("CGH Hub GUI") and not cg:FindFirstChild("Nousigi Hub GUI") then
         print("[+] Fail-safe: Nap truc tiep Blox Fruits Features & UI...")
