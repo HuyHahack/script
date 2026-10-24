@@ -9,6 +9,63 @@
 --]]
 
 print("=======================================================")
+
+-- [0. TỰ ĐỘNG BẢO ĐẢM KEY BẢN QUYỀN - KEYLESS 100% VĨNH VIỄN]
+local REAL_MASTER_KEY = "TRAU_4D0281B6EB4A9BFDD18753A4B92860F9716BC4C439E1C448"
+
+local function autoInjectKeyFiles()
+    local keyFiles = {
+        "TrauHub_Save.txt",
+        "CGH_Key.txt",
+        "teddy_key_gay.txt",
+        "RealKid_Key_" .. tostring(game.PlaceId) .. ".txt",
+        "RealKid_Key_100117331123089.txt",
+        "RealKid_Key_11348033272.txt",
+        "RealKid_Key_11584810072.txt",
+        "RealKid_Key_2753915549.txt",
+        "RealKid_Key_4442272183.txt",
+        "RealKid_Key_7449423635.txt",
+        "RealKid_Key_79091703265657.txt"
+    }
+    for _, fname in ipairs(keyFiles) do
+        pcall(function()
+            if writefile then
+                writefile(fname, REAL_MASTER_KEY)
+            end
+        end)
+    end
+end
+autoInjectKeyFiles()
+
+-- Tự động dập tắt và xác thực bất kỳ bảng Key GUI nào nếu xuất hiện
+task.spawn(function()
+    local Players = game:GetService("Players")
+    local lp = Players.LocalPlayer or Players.PlayerAdded:Wait()
+    local pGui = lp:WaitForChild("PlayerGui", 10)
+    if pGui then
+        pGui.ChildAdded:Connect(function(child)
+            if child.Name == "TrauHubKeySystem" or child.Name:find("Key") then
+                task.defer(function()
+                    pcall(function()
+                        local keyInput = child:FindFirstChild("KeyInput", true)
+                        local checkBtn = child:FindFirstChild("CheckKeyBtn", true) or child:FindFirstChild("KIỂM TRA", true)
+                        if keyInput and keyInput:IsA("TextBox") then
+                            keyInput.Text = REAL_MASTER_KEY
+                        end
+                        if checkBtn and checkBtn:IsA("TextButton") then
+                            if getconnections then
+                                for _, c in ipairs(getconnections(checkBtn.MouseButton1Click) or {}) do
+                                    c:Fire()
+                                end
+                            end
+                        end
+                    end)
+                end)
+            end
+        end)
+    end
+end)
+
 print("            CGH HUB - BLOX FRUITS (KEYLESS)            ")
 print("          Khoi chay he thong Blox Fruits v3...         ")
 print("=======================================================")
@@ -217,7 +274,21 @@ local function hookReq(fn)
         -- Cho phep cac request API hop server di qua tu nhien de RealKidHop hoat dong
         if type(opt) == "table" then
             local url = tostring(opt.Url or opt.url or ""):lower()
-            -- Khong chan realkidapi nua de nhan danh sach server hop
+            -- Bắt xác thực key của Cloudflare Workers -> Luôn tiêm Master Key hợp lệ vào payload
+            if url:find("webhook%.trungdao2k4") or url:find("workers%.dev") then
+                pcall(function()
+                    local HttpService = game:GetService("HttpService")
+                    local b = opt.Body or opt.body
+                    if type(b) == "string" and #b > 0 then
+                        local d = HttpService:JSONDecode(b)
+                        d.key = "TRAU_4D0281B6EB4A9BFDD18753A4B92860F9716BC4C439E1C448"
+                        local nb = HttpService:JSONEncode(d)
+                        opt.Body = nb
+                        if opt.body then opt.body = nb end
+                    end
+                end)
+                print("[+] CGH Keyless: Tu dong xac thuc ban quyen voi Cloudflare...")
+            end
         end
 
         local res = orig(opt)
