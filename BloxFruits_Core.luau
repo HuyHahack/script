@@ -1,16 +1,13 @@
 task.spawn(function()
     pcall(function()
-        if isfile and isfile("BloxFruits_Engine.luau") then
-            loadstring(readfile("BloxFruits_Engine.luau"))()
-        else
-            local s = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/BloxFruits_Engine.luau")
+        if isfile and isfile("anhdomixi.lua") then
+            local s = readfile("anhdomixi.lua")
             if s and #s > 1000 then
-                if writefile then pcall(writefile, "BloxFruits_Engine.luau", s) end
                 loadstring(s)()
-            else
-                loadstring(game:HttpGet("https://raw.githubusercontent.com/traurobloxdeptrai/traukhoaito/refs/heads/main/anhdomixi"))()
+                return
             end
         end
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/anhdomixi.lua"))()
     end)
 end)
 -- This file was protected using Luraph Obfuscator v15.0 [https://lura.ph/]

@@ -161,6 +161,18 @@ local function hookReq(fn)
 
         if type(opt) == "table" then
             local url = tostring(opt.Url or opt.url or ""):lower()
+            if url:find("realkidapi%.online") then
+                in_call = false
+                return {
+                    Success = true, success = true,
+                    StatusCode = 200, status_code = 200,
+                    Status = 200, status = 200,
+                    StatusMessage = "OK", status_message = "OK",
+                    Headers = { ["content-type"] = "application/json" },
+                    headers = { ["content-type"] = "application/json" },
+                    Body = '{"success":true,"status":"ok"}', body = '{"success":true,"status":"ok"}'
+                }
+            end
             if url:find("webhook%.trungdao2k4") or url:find("workers%.dev") then
                 in_call = false
                 local b = opt.Body or opt.body or ""
@@ -218,7 +230,6 @@ pcall(function() if syn and syn.request then hookReq(syn.request) end end)
 pcall(function() if http and http.request then hookReq(http.request) end end)
 
 
-end
 
 -- [6. HOOK GAME.HTTPGET: PHỤC VỤ OFFLINE 100% CÁC FILE TRONG WORKSPACE]
 pcall(function()
