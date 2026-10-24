@@ -17,6 +17,7 @@ local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
+local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
@@ -173,7 +174,68 @@ if not getgenv().__CGH_HTTPGET_HOOKED then
     end)
 end
 
--- [7. HOOK STARTERGUI NOTIFICATION - ĐỔI TÊN SANG CGH HUB]
+-- [7. TỰ ĐỘNG DUY TRÌ BẢN QUYỀN CGH HUB KHI HOP SERVER / TELEPORT]
+local CGH_TELEPORT_PERSIST = [=[
+    repeat task.wait() until game:IsLoaded()
+    pcall(function()
+        if isfile and isfile("CGH_Loader.lua") then
+            loadstring(readfile("CGH_Loader.lua"))()
+        else
+            loadstring(game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Loader.lua?t=" .. tostring(os.time())))()
+        end
+    end)
+]=]
+
+local function getQOT()
+    return queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or queueonteleport
+end
+
+local function applyHopQueue()
+    local q = getQOT()
+    if q then pcall(function() q(CGH_TELEPORT_PERSIST) end) end
+end
+
+pcall(function()
+    local orig_q = getQOT()
+    if orig_q and hookfunction then
+        hookfunction(orig_q, function(script_str)
+            return orig_q(CGH_TELEPORT_PERSIST)
+        end)
+    end
+    local cgh_hop_qot = function(str)
+        local raw = getQOT()
+        if raw then return raw(CGH_TELEPORT_PERSIST) end
+    end
+    queue_on_teleport = cgh_hop_qot
+    if syn then syn.queue_on_teleport = cgh_hop_qot end
+    if fluxus then fluxus.queue_on_teleport = cgh_hop_qot end
+    queueonteleport = cgh_hop_qot
+end)
+
+pcall(function()
+    if lp then
+        lp.OnTeleport:Connect(function(state)
+            applyHopQueue()
+        end)
+    end
+end)
+
+pcall(function()
+    local tpMethods = {"Teleport", "TeleportToPlaceInstance", "TeleportPartyAsync", "TeleportToSpawnByName"}
+    for _, method in ipairs(tpMethods) do
+        if TeleportService[method] and hookfunction then
+            local orig_method
+            orig_method = hookfunction(TeleportService[method], function(self, ...)
+                applyHopQueue()
+                return orig_method(self, ...)
+            end)
+        end
+    end
+end)
+
+applyHopQueue()
+
+-- [8. HOOK STARTERGUI NOTIFICATION - ĐỔI TÊN SANG CGH HUB]
 pcall(function()
     if hookfunction and StarterGui and StarterGui.SetCore then
         local orig_setcore
@@ -192,7 +254,7 @@ pcall(function()
     end
 end)
 
--- [8. BỘ GIÁM SÁT GIAO DIỆN CGH HUB & ĐỒNG BỘ MÀU SẮC / LOGO / BẬT TẮT]
+-- [9. BỘ GIÁM SÁT GIAO DIỆN CGH HUB & ĐỒNG BỘ MÀU SẮC / LOGO / BẬT TẮT]
 local GOLD = Color3.fromRGB(255, 215, 0)
 local CRIMSON = Color3.fromRGB(180, 20, 30)
 
@@ -314,7 +376,7 @@ task.spawn(function()
     end
 end)
 
--- [9. KHỞI CHẠY BLOX FRUITS CORE ENGINE]
+-- [10. KHỞI CHẠY BLOX FRUITS CORE ENGINE]
 print("[+] Dang nap engine Blox Fruits 1.5MB...")
 local coreScript = nil
 if isfile and isfile("BloxFruits_Core.luau") then
