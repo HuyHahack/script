@@ -104,95 +104,76 @@ if not getgenv().__CGH_REQ_HOOKED then
         orig = hookfunction(fn, function(opt)
             if in_call then return orig(opt) end
             in_call = true
-
-            if type(opt) == "table" then
-                local url = tostring(opt.Url or opt.url or ""):lower()
-                
-                -- Bẻ khóa Cloudflare Worker trả về JWT có chữ ký RSA hợp lệ tuyệt đối
-                if url:find("webhook%.trungdao2k4") or url:find("workers%.dev") then
-                    in_call = false
-                    print("[+] CGH Keyless: Tu dong xac thuc ban quyen RSA thanh cong 100%!")
-                    return {
-                        Success = true, success = true,
-                        StatusCode = 200, status_code = 200,
-                        Status = 200, status = 200,
-                        StatusMessage = "OK", status_message = "OK",
-                        Headers = { ["content-type"] = "application/json" },
-                        headers = { ["content-type"] = "application/json" },
-                        Body = REAL_SIGNED_JWT, body = REAL_SIGNED_JWT
-                    }
-                end
-
-                -- Mock telemetry realkidapi.online để không bị giật lag
-                if url:find("realkidapi%.online") then
-                    in_call = false
-                    return {
-                        Success = true, success = true,
-                        StatusCode = 200, status_code = 200,
-                        Status = 200, status = 200,
-                        StatusMessage = "OK", status_message = "OK",
-                        Headers = { ["content-type"] = "application/json" },
-                        headers = { ["content-type"] = "application/json" },
-                        Body = '{"success":true,"status":"ok"}', body = '{"success":true,"status":"ok"}'
-                    }
-                end
+            local url = ""
+            if type(opt) == "table" and opt.Url then
+                url = tostring(opt.Url)
+            elseif type(opt) == "string" then
+                url = opt
             end
 
-            local res = orig(opt)
+            -- Chặn và trả JWT hợp lệ cho API xác thực
+            if url:find("webhook.trungdao2k4.workers.dev") then
+                in_call = false
+                print("[+] CGH Keyless: Tu dong xac thuc ban quyen thanh cong (Vinh vien 2099)!")
+                return {
+                    StatusCode = 200,
+                    StatusMessage = "OK",
+                    Body = REAL_SIGNED_JWT,
+                    Success = true,
+                    Headers = {["content-type"] = "application/json"}
+                }
+            end
+
+            -- Chặn discord webhook spam
+            if url:find("discord.com/api/webhooks") or url:find("discordapp.com/api/webhooks") then
+                in_call = false
+                return {
+                    StatusCode = 200,
+                    StatusMessage = "OK",
+                    Body = '{"status":"ok"}',
+                    Success = true,
+                    Headers = {["content-type"] = "application/json"}
+                }
+            end
+
             in_call = false
-            return res
+            return orig(opt)
         end)
         return orig
     end
 
-    pcall(function() if request then hookReq(request) end end)
-    pcall(function() if http_request then hookReq(http_request) end end)
-    pcall(function() if syn and syn.request then hookReq(syn.request) end end)
-    pcall(function() if http and http.request then hookReq(http.request) end end)
+    if http and http.request then hookReq(http.request) end
+    if http_request then hookReq(http_request) end
+    if request then hookReq(request) end
+    if syn and syn.request then hookReq(syn.request) end
 end
 
--- [6. HOOK GAME.HTTPGET: PHỤC VỤ OFFLINE WORKSPACE]
+-- [6. HOOK HTTPGET: ĐIỀU HƯỚNG TẤT CẢ TÀI NGUYÊN VỀ CGH HUB]
 if not getgenv().__CGH_HTTPGET_HOOKED then
     getgenv().__CGH_HTTPGET_HOOKED = true
-    pcall(function()
-        if hookfunction and game and game.HttpGet then
-            local orig_httpget
-            orig_httpget = hookfunction(game.HttpGet, function(self, url, ...)
-                local lowerUrl = tostring(url):lower()
-                if lowerUrl:find("anhdomixi") then
-                    if isfile and isfile("anhdomixi.lua") then
-                        local c = readfile("anhdomixi.lua")
-                        if c and #c > 1000 then return c end
-                    end
-                elseif lowerUrl:find("bloxfruits_core") or lowerUrl:find("bloxfruits%.lua") then
-                    if isfile and isfile("BloxFruits_Core.luau") then
-                        local c = readfile("BloxFruits_Core.luau")
-                        if c and #c > 1000 then return c end
-                    end
-                end
-                return orig_httpget(self, url, ...)
-            end)
-        end
-    end)
-end
+    local orig_httpget
+    orig_httpget = hookfunction(game.HttpGet, function(self, url, ...)
+        local urlStr = tostring(url or "")
 
--- [7. PHÍM TẮT CTRL ẨN/HIỆN GIAO DIỆN CHÍNH XÁC 100%]
-if not getgenv().__CGH_CTRL_HOOKED then
-    getgenv().__CGH_CTRL_HOOKED = true
-    UserInputService.InputBegan:Connect(function(input, gpe)
-        if not UserInputService:GetFocusedTextBox() and (input.KeyCode == Enum.KeyCode.LeftControl or input.KeyCode == Enum.KeyCode.RightControl) then
-            getgenv().UIToggled = not getgenv().UIToggled
-            for _, guiName in ipairs({"Nousigi Hub GUI", "CGH Hub GUI"}) do
-                local g = CoreGui:FindFirstChild(guiName)
-                if g then
-                    g.Enabled = getgenv().UIToggled
-                end
+        -- Chuyển hướng anhdomixi sang local/repo sạch
+        if urlStr:find("anhdomixi.lua") then
+            if isfile and isfile("anhdomixi.lua") then
+                local data = readfile("anhdomixi.lua")
+                if data and #data > 1000 then return data end
             end
+            return orig_httpget(self, "https://raw.githubusercontent.com/HuyHahack/script/main/anhdomixi.lua?t=" .. tostring(os.time()), ...)
         end
+
+        -- Mock server response nếu gọi bằng HttpGet
+        if urlStr:find("webhook.trungdao2k4.workers.dev") then
+            return REAL_SIGNED_JWT
+        end
+
+        return orig_httpget(self, url, ...)
     end)
 end
 
--- [8. HOOK STARTERGUI NOTIFICATION - TOÀN BỘ CHUYỂN THÀNH CGH HUB]
+-- [7. HOOK STARTERGUI NOTIFICATION - ĐỔI TÊN SANG CGH HUB]
 pcall(function()
     if hookfunction and StarterGui and StarterGui.SetCore then
         local orig_setcore
@@ -211,96 +192,109 @@ pcall(function()
     end
 end)
 
--- [9. BỘ GIÁM SÁT TỰ ĐỘNG BẬT VÀ TRANG TRÍ CGH HUB (CỜ VIỆT NAM, NÚT BẬT TẮT, NOTIFICATION)]
+-- [8. BỘ GIÁM SÁT GIAO DIỆN CGH HUB & ĐỒNG BỘ MÀU SẮC / LOGO / BẬT TẮT]
 local GOLD = Color3.fromRGB(255, 215, 0)
 local CRIMSON = Color3.fromRGB(180, 20, 30)
 
 task.spawn(function()
+    local enabledInitial = false
+    local notiHooked = false
+
     while true do
-        task.wait(0.5)
+        task.wait(0.3)
         local assetLogo = (getcustomasset and isfile and isfile("cgh_logo.png") and getcustomasset("cgh_logo.png")) or "rbxassetid://96220014754961"
 
-        -- 1. Trang trí giao diện chính (Cả Nousigi Hub GUI và CGH Hub GUI)
-        for _, guiName in ipairs({"Nousigi Hub GUI", "CGH Hub GUI"}) do
-            local gui = CoreGui:FindFirstChild(guiName)
-            if gui then
-                if getgenv().UIToggled ~= false then
-                    gui.Enabled = true
-                end
+        -- 1. Đồng bộ cấu hình màu sắc trong getgenv().UIColor
+        if getgenv().UIColor and type(getgenv().UIColor) == "table" then
+            getgenv().UIColor["Logo Image"] = assetLogo
+            getgenv().UIColor["Border Color"] = GOLD
+            getgenv().UIColor["Toggle Border Color"] = GOLD
+            getgenv().UIColor["Title Text Color"] = GOLD
+            getgenv().UIColor["Button Color"] = GOLD
+            getgenv().UIColor["Section Underline Color"] = GOLD
+        end
 
-                -- Đổi Tiêu đề sang CGH Hub
-                local title = gui:FindFirstChild("TextLabelMain", true)
-                if title and not title.Text:find("CGH Team") then
-                    title.Text = '<font color="rgb(255,215,0)">CGH Hub</font> Blox Fruits - CGH Team'
-                end
+        -- 2. Tự động hiển thị giao diện CHÍNH XÁC 1 LẦN khi vừa khởi tạo xong
+        local gui = CoreGui:FindFirstChild("Nousigi Hub GUI")
+        if gui then
+            if not enabledInitial then
+                enabledInitial = true
+                getgenv().UIToggled = true
+                gui.Enabled = true
+            end
 
-                -- Đổi Logo sang Cờ Việt Nam
-                local logo = gui:FindFirstChild("Ruafimg", true)
-                if logo and logo.Image ~= assetLogo then
-                    pcall(function() logo.Image = assetLogo end)
-                end
+            -- Đổi Tiêu đề sang CGH Hub
+            local title = gui:FindFirstChild("TextLabelMain", true)
+            if title and not title.Text:find("CGH Team") then
+                title.Text = '<font color="rgb(255,215,0)">CGH Hub</font> Blox Fruits - CGH Team'
+            end
 
-                -- Đổi viền và nhãn văn bản sang Vàng Gold
-                for _, d in ipairs(gui:GetDescendants()) do
-                    if d:IsA("TextLabel") and (d.Text:find("RealKid") or d.Text:find("ReadKid") or d.Text:find("Nousigi")) then
-                        d.Text = d.Text:gsub("RealKid", "CGH Hub"):gsub("ReadKid", "CGH Hub"):gsub("Nousigi", "CGH Hub")
-                    end
-                    if d:IsA("UIStroke") and d.Color == Color3.fromRGB(0, 170, 255) then
-                        d.Color = GOLD
-                    end
+            -- Đổi Logo sang Cờ Việt Nam
+            local logo = gui:FindFirstChild("Ruafimg", true)
+            if logo and logo.Image ~= assetLogo then
+                pcall(function() logo.Image = assetLogo end)
+            end
+
+            -- Đổi viền và nhãn văn bản sang Vàng Gold & CGH Hub
+            for _, d in ipairs(gui:GetDescendants()) do
+                if d:IsA("TextLabel") and (d.Text:find("RealKid") or d.Text:find("ReadKid") or d.Text:find("Nousigi")) then
+                    d.Text = d.Text:gsub("RealKid", "CGH Hub"):gsub("ReadKid", "CGH Hub"):gsub("Nousigi", "CGH Hub")
+                end
+                if d:IsA("UIStroke") and d.Color == Color3.fromRGB(0, 170, 255) then
+                    d.Color = GOLD
                 end
             end
         end
 
-        -- 2. Trang trí Nút Bật Tắt (Nousigi Hub Btn & CGH Hub Btn)
-        for _, btnGuiName in ipairs({"Nousigi Hub Btn", "CGH Hub Btn"}) do
-            local btnGui = CoreGui:FindFirstChild(btnGuiName)
-            if btnGui then
-                for _, img in ipairs(btnGui:GetDescendants()) do
-                    if img:IsA("ImageLabel") and img.Image ~= assetLogo then
-                        pcall(function()
-                            img.Image = assetLogo
-                            img.ImageColor3 = Color3.new(1, 1, 1)
-                        end)
-                    end
-                    if img:IsA("Frame") and img.Name:find("Hide") then
-                        img.BackgroundColor3 = CRIMSON
-                    end
-                    if img:IsA("UIStroke") then
-                        img.Color = GOLD
-                    end
+        -- 3. Trang trí Nút Bật Tắt Nổi (Logo Cờ Việt Nam + Nền Crimson + Viền Gold)
+        local btnGui = CoreGui:FindFirstChild("Nousigi Hub Btn")
+        if btnGui then
+            local dutDit = btnGui:FindFirstChild("dut dit", true)
+            if dutDit and dutDit.BackgroundColor3 ~= CRIMSON then
+                dutDit.BackgroundColor3 = CRIMSON
+                local stroke = dutDit:FindFirstChildOfClass("UIStroke")
+                if not stroke then
+                    stroke = Instance.new("UIStroke", dutDit)
+                    stroke.Thickness = 1.5
                 end
-                -- Tự động toggle cả 2 GUI khi bấm nút
-                local btn = btnGui:FindFirstChildOfClass("TextButton", true)
-                if btn and not btn:GetAttribute("CGH_Hooked") then
-                    btn:SetAttribute("CGH_Hooked", true)
-                    btn.MouseButton1Click:Connect(function()
-                        getgenv().UIToggled = not getgenv().UIToggled
-                        for _, gn in ipairs({"Nousigi Hub GUI", "CGH Hub GUI"}) do
-                            local g = CoreGui:FindFirstChild(gn)
-                            if g then g.Enabled = getgenv().UIToggled end
+                stroke.Color = GOLD
+            end
+
+            local imgHide = btnGui:FindFirstChild("imgHide", true) or btnGui:FindFirstChildOfClass("ImageLabel", true)
+            if imgHide and imgHide.Image ~= assetLogo then
+                pcall(function()
+                    imgHide.Image = assetLogo
+                    imgHide.ImageColor3 = Color3.new(1, 1, 1)
+                end)
+            end
+        end
+
+        -- 4. Trang trí Thông báo Notifications trong NotiContainer
+        local notiGui = CoreGui:FindFirstChild("Nousigi Hub Notification")
+        if notiGui then
+            local container = notiGui:FindFirstChild("NotiContainer")
+            if container and not notiHooked then
+                notiHooked = true
+                local function cleanNoti(inst)
+                    for _, d in ipairs(inst:GetDescendants()) do
+                        if d:IsA("TextLabel") and (d.Text:find("RealKid") or d.Text:find("Nousigi") or d.Text:find("ReadKid")) then
+                            d.Text = d.Text:gsub("RealKid", "CGH Hub"):gsub("Nousigi", "CGH Hub"):gsub("ReadKid", "CGH Hub")
                         end
-                    end)
+                        if d:IsA("ImageLabel") and d.Image ~= assetLogo then
+                            pcall(function() d.Image = assetLogo end)
+                        end
+                    end
                 end
+
+                container.ChildAdded:Connect(function(child)
+                    task.wait(0.02)
+                    cleanNoti(child)
+                end)
+                cleanNoti(container)
             end
         end
 
-        -- 3. Trang trí Thông báo Notifications (Nousigi Hub Notification & CGH Hub Notification)
-        for _, notiGuiName in ipairs({"Nousigi Hub Notification", "CGH Hub Notification"}) do
-            local notiGui = CoreGui:FindFirstChild(notiGuiName)
-            if notiGui then
-                for _, d in ipairs(notiGui:GetDescendants()) do
-                    if d:IsA("TextLabel") and (d.Text:find("RealKid") or d.Text:find("Nousigi") or d.Text:find("ReadKid")) then
-                        d.Text = d.Text:gsub("RealKid", "CGH Hub"):gsub("Nousigi", "CGH Hub"):gsub("ReadKid", "CGH Hub")
-                    end
-                    if d:IsA("ImageLabel") and d.Name:find("Ruaf") and d.Image ~= assetLogo then
-                        pcall(function() d.Image = assetLogo end)
-                    end
-                end
-            end
-        end
-
-        -- 4. Tự động bypass TrauHubKeySystem nếu còn sót
+        -- 5. Tự động bypass TrauHubKeySystem nếu còn sót
         local pgui = lp:FindFirstChildOfClass("PlayerGui")
         local ks = pgui and pgui:FindFirstChild("TrauHubKeySystem")
         if ks then
@@ -320,7 +314,7 @@ task.spawn(function()
     end
 end)
 
--- [10. KHỞI CHẠY BLOX FRUITS CORE ENGINE]
+-- [9. KHỞI CHẠY BLOX FRUITS CORE ENGINE]
 print("[+] Dang nap engine Blox Fruits 1.5MB...")
 local coreScript = nil
 if isfile and isfile("BloxFruits_Core.luau") then
