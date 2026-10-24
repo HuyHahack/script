@@ -317,12 +317,12 @@ task.spawn(function()
                 end
                 -- Dropdown item chọn người chơi (SampleItemBG) -> Đỏ Crimson thay vì xanh dương
                 if d.Name == "SampleItemBG" and d:IsA("Frame") then
-                    if (d.BackgroundColor3.B > d.BackgroundColor3.R and d.BackgroundColor3.B > 0.35) or (d.BackgroundColor3 == Color3.fromRGB(0, 110, 190)) then
+                    if d.BackgroundColor3.B > d.BackgroundColor3.R and d.BackgroundColor3.B > 0.35 then
                         d.BackgroundColor3 = CRIMSON
                     end
                 end
                 if d.Name == "SampleItemCheck" and d:IsA("ImageButton") then
-                    if d.ImageColor3.B > d.ImageColor3.R or d.ImageColor3 == Color3.fromRGB(0, 110, 190) then
+                    if d.ImageColor3.B > d.ImageColor3.R and d.ImageColor3.B > 0.35 then
                         d.ImageColor3 = GOLD
                     end
                 end
@@ -399,89 +399,7 @@ task.spawn(function()
     end
 end)
 
--- [10. BỘ TỰ ĐỘNG THỰC THI LOW CPU KHI ĐƯỢC BẬT TRONG CÀI ĐẶT]
-task.spawn(function()
-    local lowCpuExecuted = false
-    while true do
-        task.wait(1.5)
-        if not lowCpuExecuted then
-            local shouldEnableLowCpu = false
-
-            -- 1. Kiểm tra cấu hình save2 của người chơi
-            if isfile and lp then
-                local savePath = "RealKidHub/save2/" .. lp.Name .. ".json"
-                if isfile(savePath) then
-                    pcall(function()
-                        local cfg = HttpService:JSONDecode(readfile(savePath))
-                        if cfg and cfg.auto_low_cpu_once == true then
-                            shouldEnableLowCpu = true
-                        end
-                    end)
-                end
-            end
-
-            -- 2. Kiểm tra trong AllControls hoặc UI
-            local turnOnLowCpuBtn = nil
-            if getgenv().AllControls then
-                for _, ctrl in ipairs(getgenv().AllControls) do
-                    if ctrl.Name == "Auto Turn on Low CPU" and ctrl.Element then
-                        local check = ctrl.Element:FindFirstChild("check", true)
-                        if check and (check.Size.X.Scale > 0.1 or check.Size.X.Offset > 0) then
-                            shouldEnableLowCpu = true
-                        end
-                    elseif ctrl.Name == "Turn on Low CPU" and ctrl.Element then
-                        turnOnLowCpuBtn = ctrl.Element
-                    end
-                end
-            end
-
-            -- 3. Quét trực tiếp CoreGui nếu AllControls chưa sẵn sàng
-            local g = CoreGui:FindFirstChild("Nousigi Hub GUI")
-            if g then
-                for _, d in ipairs(g:GetDescendants()) do
-                    if d:IsA("TextLabel") and d.Text == "Auto Turn on Low CPU" then
-                        local p = d.Parent
-                        while p and p.Name ~= "ToggleFrame" and p ~= g do
-                            p = p.Parent
-                        end
-                        if p and p.Name == "ToggleFrame" then
-                            local chk = p:FindFirstChild("check", true)
-                            if chk and (chk.Size.X.Scale > 0.1 or chk.Size.X.Offset > 0) then
-                                shouldEnableLowCpu = true
-                            end
-                        end
-                    elseif d:IsA("TextLabel") and d.Text == "Turn on Low CPU" then
-                        local p = d.Parent
-                        while p and p.Name ~= "Button" and p ~= g do
-                            p = p.Parent
-                        end
-                        if p and p.Name == "Button" then
-                            turnOnLowCpuBtn = p
-                        end
-                    end
-                end
-            end
-
-            -- 4. Kích hoạt nút Turn on Low CPU
-            if shouldEnableLowCpu and turnOnLowCpuBtn then
-                for _, desc in ipairs(turnOnLowCpuBtn:GetDescendants()) do
-                    if desc:IsA("TextButton") then
-                        for _, conn in ipairs(getconnections(desc.MouseButton1Down)) do
-                            pcall(function() conn:Fire() end)
-                        end
-                        for _, conn in ipairs(getconnections(desc.MouseButton1Click)) do
-                            pcall(function() conn:Fire() end)
-                        end
-                    end
-                end
-                lowCpuExecuted = true
-                print("[+] CGH Hub: Da tu dong kich hoat thanh cong Low CPU!")
-            end
-        end
-    end
-end)
-
--- [11. KHỞI CHẠY BLOX FRUITS CORE ENGINE]
+-- [10. KHỞI CHẠY BLOX FRUITS CORE ENGINE]
 print("[+] Dang nap engine Blox Fruits 1.5MB...")
 local coreScript = nil
 if isfile and isfile("BloxFruits_Core.luau") then
