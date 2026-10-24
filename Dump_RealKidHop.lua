@@ -84,10 +84,8 @@ local function hookHttpFunction(name, fn)
             appendLog(string.format(">>> REQUEST PAYLOAD:\n%s", tostring(reqBody)))
         end
 
-        -- Cho request THUC TE di den server, KHONG CHAN de RealKidHop hoat dong binh thuong
-        local success, response = pcall(function()
-            return orig_fn(opt, ...)
-        end)
+        -- Cho request THỰC TẾ đi đến server, KHÔNG CHẶN để RealKidHop hoạt động bình thường
+        local success, response = pcall(orig_fn, opt, ...)
 
         in_call = false
 
@@ -99,7 +97,6 @@ local function hookHttpFunction(name, fn)
 
             appendLog(string.format("<<< STATUS: %s | BYTES: %d", tostring(statusCode), #tostring(resBody)))
             if #tostring(resBody) > 0 then
-                -- In toi da 1500 ky tu response de de quan sat
                 local preview = tostring(resBody)
                 if #preview > 1500 then
                     preview = preview:sub(1, 1500) .. "\n... [TRUNCATED " .. tostring(#resBody - 1500) .. " BYTES]"
