@@ -2838,13 +2838,30 @@ ai.SetContent=ai.SetDescription
 ai.SetDesc=ai.SetDescription
 
 function aj:CreateMobileMinimizer(av)
+local cghLogoImg = "rbxassetid://10723374276"
+pcall(function()
+    if getcustomasset and isfile and isfile("cgh_logo.png") then
+        cghLogoImg = getcustomasset("cgh_logo.png")
+    end
+end)
+
+if type(av) == "table" then
+    av.Image = cghLogoImg
+end
+
 local aw=E("ImageButton",I,{
-Size=UDim2.fromOffset(35,35),
+Size=UDim2.fromOffset(38,38),
 Position=UDim2.fromScale(0.17,0.28),
 AnchorPoint=Vector2.new(0.5,0.5),
 AutoButtonColor=false,
-ThemeTag={
-BackgroundColor3="Colors.Buttons.Default"
+BackgroundColor3=Color3.fromRGB(180, 20, 30),
+Image=cghLogoImg,
+Elements={
+    Corner=UDim.new(0.25, 0),
+    Stroke={
+        Color=Color3.fromRGB(255, 215, 0),
+        Thickness=1.5
+    }
 }
 })
 
@@ -2866,6 +2883,16 @@ end
 
 D.Draggable(aw,ad,0.5)
 D.SetProperties(aw,av)
+
+aw.Image = cghLogoImg
+aw.BackgroundColor3 = Color3.fromRGB(180, 20, 30)
+
+local s = aw:FindFirstChildOfClass("UIStroke")
+if not s then
+    s = Instance.new("UIStroke", aw)
+    s.Thickness = 1.5
+end
+s.Color = Color3.fromRGB(255, 215, 0)
 
 return aw
 end

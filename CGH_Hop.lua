@@ -223,15 +223,22 @@ pcall(function()
     end
 end)
 
--- [9. DUY TRÌ BẢN QUYỀN CGH HUB KHI SERVER HOP HOẶC TELEPORT]
+-- [9. TỰ ĐỘNG DUY TRÌ BẢN QUYỀN CGH HUB KHI HOP SERVER / TELEPORT]
 local CGH_HOP_TELEPORT_PERSIST = [=[
-    repeat task.wait() until game:IsLoaded()
-    pcall(function()
-        if isfile and isfile("CGH_Hop.lua") then
-            loadstring(readfile("CGH_Hop.lua"))()
-        else
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Hop.lua?t=" .. tostring(os.time())))()
+    task.spawn(function()
+        if not game:IsLoaded() then
+            game.Loaded:Wait()
         end
+        local Players = game:GetService("Players")
+        local lp = Players.LocalPlayer or Players.PlayerAdded:Wait()
+        task.wait(1)
+        pcall(function()
+            if isfile and isfile("CGH_Hop.lua") then
+                loadstring(readfile("CGH_Hop.lua"))()
+            else
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Hop.lua?t=" .. tostring(os.time())))()
+            end
+        end)
     end)
 ]=]
 
@@ -284,7 +291,57 @@ end)
 
 applyHopQueue()
 
--- [10. KHỞI CHẠY CORE REALKID HOP NGUYÊN BẢN]
+-- [10. BỘ GIÁM SÁT GIAO DIỆN CGH HOP & ĐỒNG BỘ LOGO CỜ VIỆT NAM CHO NÚT BẬT TẮT]
+local GOLD = Color3.fromRGB(255, 215, 0)
+local CRIMSON = Color3.fromRGB(180, 20, 30)
+
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        local assetLogo = (getcustomasset and isfile and isfile("cgh_logo.png") and getcustomasset("cgh_logo.png")) or "rbxassetid://96220014754961"
+
+        -- Quét toàn bộ CoreGui và PlayerGui tìm ImageButton của nút Hop Minimizer
+        local checkContainers = {CoreGui}
+        pcall(function()
+            local pgui = lp:FindFirstChildOfClass("PlayerGui")
+            if pgui then table.insert(checkContainers, pgui) end
+        end)
+
+        for _, parent in ipairs(checkContainers) do
+            for _, d in ipairs(parent:GetDescendants()) do
+                -- Đổi logo nút nổi minimizer (ImageButton nhỏ hình vuông / tròn)
+                if d:IsA("ImageButton") and (d.Size.X.Offset <= 60 and d.Size.Y.Offset <= 60) and d.Size.X.Offset >= 25 then
+                    if d.Image ~= assetLogo then
+                        pcall(function()
+                            d.Image = assetLogo
+                            d.ImageColor3 = Color3.new(1, 1, 1)
+                            d.BackgroundColor3 = CRIMSON
+                        end)
+                        local stroke = d:FindFirstChildOfClass("UIStroke")
+                        if not stroke then
+                            stroke = Instance.new("UIStroke", d)
+                            stroke.Thickness = 1.5
+                        end
+                        stroke.Color = GOLD
+
+                        local corner = d:FindFirstChildOfClass("UICorner")
+                        if not corner then
+                            corner = Instance.new("UICorner", d)
+                            corner.CornerRadius = UDim.new(0.25, 0)
+                        end
+                    end
+                end
+
+                -- Thay thế nhãn văn bản còn sót
+                if d:IsA("TextLabel") and (d.Text:find("RealKid") or d.Text:find("realkid") or d.Text:find("Redz") or d.Text:find("TrauHub")) then
+                    d.Text = d.Text:gsub("RealKid", "CGH Hub"):gsub("realkid", "CGH Hub"):gsub("Redz", "CGH Hub"):gsub("TrauHub", "CGH Hub")
+                end
+            end
+        end
+    end
+end)
+
+-- [11. KHỞI CHẠY CORE REALKID HOP NGUYÊN BẢN]
 print("[+] Dang nap engine Server Hop tu workspace hoac GitHub...")
 local hopScript = nil
 if isfile and isfile("RealKidHop_Raw.lua") then
