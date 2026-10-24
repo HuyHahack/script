@@ -176,13 +176,20 @@ end
 
 -- [7. TỰ ĐỘNG DUY TRÌ BẢN QUYỀN CGH HUB KHI HOP SERVER / TELEPORT]
 local CGH_TELEPORT_PERSIST = [=[
-    repeat task.wait() until game:IsLoaded()
-    pcall(function()
-        if isfile and isfile("CGH_Loader.lua") then
-            loadstring(readfile("CGH_Loader.lua"))()
-        else
-            loadstring(game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Loader.lua?t=" .. tostring(os.time())))()
+    task.spawn(function()
+        if not game:IsLoaded() then
+            game.Loaded:Wait()
         end
+        local Players = game:GetService("Players")
+        local lp = Players.LocalPlayer or Players.PlayerAdded:Wait()
+        task.wait(1)
+        pcall(function()
+            if isfile and isfile("CGH_Loader.lua") then
+                loadstring(readfile("CGH_Loader.lua"))()
+            else
+                loadstring(game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Loader.lua?t=" .. tostring(os.time())))()
+            end
+        end)
     end)
 ]=]
 
@@ -254,9 +261,14 @@ pcall(function()
     end
 end)
 
--- [9. BỘ GIÁM SÁT GIAO DIỆN CGH HUB & ĐỒNG BỘ MÀU SẮC / LOGO / BẬT TẮT]
+-- [9. BỘ GIÁM SÁT GIAO DIỆN CGH HUB & ĐỒNG BỘ MÀU CỜ ĐỎ SAO VÀNG / LOGO]
 local GOLD = Color3.fromRGB(255, 215, 0)
 local CRIMSON = Color3.fromRGB(180, 20, 30)
+local CRIMSON_GRADIENT = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(220, 30, 45)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(180, 20, 30)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(130, 10, 20))
+}
 
 task.spawn(function()
     local enabledInitial = false
@@ -266,14 +278,19 @@ task.spawn(function()
         task.wait(0.3)
         local assetLogo = (getcustomasset and isfile and isfile("cgh_logo.png") and getcustomasset("cgh_logo.png")) or "rbxassetid://96220014754961"
 
-        -- 1. Đồng bộ cấu hình màu sắc trong getgenv().UIColor
+        -- 1. Đồng bộ cấu hình màu sắc trong getgenv().UIColor (Chuẩn cờ đỏ sao vàng)
         if getgenv().UIColor and type(getgenv().UIColor) == "table" then
             getgenv().UIColor["Logo Image"] = assetLogo
             getgenv().UIColor["Border Color"] = GOLD
             getgenv().UIColor["Toggle Border Color"] = GOLD
             getgenv().UIColor["Title Text Color"] = GOLD
-            getgenv().UIColor["Button Color"] = GOLD
+            getgenv().UIColor["Button Color"] = CRIMSON
             getgenv().UIColor["Section Underline Color"] = GOLD
+            getgenv().UIColor["Page Selected Color"] = GOLD
+            getgenv().UIColor["Dropdown Selected Color"] = GOLD
+            getgenv().UIColor["Slider Line Color"] = GOLD
+            getgenv().UIColor["Slider Highlight Color"] = CRIMSON
+            getgenv().UIColor["Search Icon Highlight Color"] = GOLD
         end
 
         -- 2. Tự động hiển thị giao diện CHÍNH XÁC 1 LẦN khi vừa khởi tạo xong
@@ -297,10 +314,33 @@ task.spawn(function()
                 pcall(function() logo.Image = assetLogo end)
             end
 
-            -- Đổi viền và nhãn văn bản sang Vàng Gold & CGH Hub
+            -- Đổi màu toàn bộ thành phần theo phong cách CỜ ĐỎ SAO VÀNG
             for _, d in ipairs(gui:GetDescendants()) do
+                -- Đổi tên RealKid -> CGH Hub
                 if d:IsA("TextLabel") and (d.Text:find("RealKid") or d.Text:find("ReadKid") or d.Text:find("Nousigi")) then
                     d.Text = d.Text:gsub("RealKid", "CGH Hub"):gsub("ReadKid", "CGH Hub"):gsub("Nousigi", "CGH Hub")
+                end
+                -- Checkbox ruột vuông -> Vàng Gold
+                if d.Name == "check" and d:IsA("Frame") and d.BackgroundColor3 ~= GOLD then
+                    d.BackgroundColor3 = GOLD
+                end
+                -- Checkbox viền ngoài -> Vàng Gold
+                if d.Name == "checkbox" and d:IsA("ImageLabel") and d.ImageColor3 ~= GOLD then
+                    d.ImageColor3 = GOLD
+                end
+                -- Nút ClickArea -> Đỏ Crimson cờ đỏ
+                if d.Name == "ClickArea" and d:IsA("Frame") then
+                    if d.BackgroundColor3 ~= CRIMSON then
+                        d.BackgroundColor3 = CRIMSON
+                    end
+                    local grad = d:FindFirstChildOfClass("UIGradient")
+                    if grad and grad.Color ~= CRIMSON_GRADIENT then
+                        grad.Color = CRIMSON_GRADIENT
+                    end
+                end
+                -- Tab indicator và viền xanh dương cũ -> Vàng Gold
+                if d:IsA("Frame") and d.BackgroundColor3 == Color3.fromRGB(0, 170, 255) then
+                    d.BackgroundColor3 = GOLD
                 end
                 if d:IsA("UIStroke") and d.Color == Color3.fromRGB(0, 170, 255) then
                     d.Color = GOLD
@@ -322,12 +362,14 @@ task.spawn(function()
                 stroke.Color = GOLD
             end
 
-            local imgHide = btnGui:FindFirstChild("imgHide", true) or btnGui:FindFirstChildOfClass("ImageLabel", true)
-            if imgHide and imgHide.Image ~= assetLogo then
-                pcall(function()
-                    imgHide.Image = assetLogo
-                    imgHide.ImageColor3 = Color3.new(1, 1, 1)
-                end)
+            -- Duyệt tất cả ImageLabel trong nút nổi và gán logo Cờ Việt Nam 100%
+            for _, img in ipairs(btnGui:GetDescendants()) do
+                if img:IsA("ImageLabel") and img.Image ~= assetLogo then
+                    pcall(function()
+                        img.Image = assetLogo
+                        img.ImageColor3 = Color3.new(1, 1, 1)
+                    end)
+                end
             end
         end
 
