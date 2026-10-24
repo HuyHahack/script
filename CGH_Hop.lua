@@ -42,26 +42,10 @@ local function ensureKeyFiles()
 end
 ensureKeyFiles()
 
-local function isKeyFile(path)
-    if type(path) ~= "string" then return false end
-    local lower = path:lower()
-    return lower:find("trauhub_save") or lower:find("realkid_key") or lower:find("cgh_key")
-end
-
-pcall(function()
-    if isfile and hookfunction then
-        local orig_isfile = isfile
-        hookfunction(isfile, function(path)
-            if isKeyFile(path) then return true end
-            return orig_isfile(path)
-        end)
-    end
-    if readfile and hookfunction then
-        local orig_readfile = readfile
-        hookfunction(readfile, function(path)
-            if isKeyFile(path) then return PERMANENT_KEY end
-            return orig_readfile(path)
-        end)
+-- Đảm bảo key file luôn tồn tại liên tục
+task.spawn(function()
+    while task.wait(1) do
+        ensureKeyFiles()
     end
 end)
 
