@@ -176,7 +176,6 @@ function TrauHubLib:CreateUI(config)
     inputStroke.Parent = inputContainer
     
     local keyInput = Instance.new("TextBox")
-    keyInput.Text = "TRAU_4D0281B6EB4A9BFDD18753A4B92860F9716BC4C439E1C448"
     keyInput.Name = "KeyInput"
     keyInput.Position = UDim2.new(0, 15, 0, 0)
     keyInput.Size = UDim2.new(1, -30, 1, 0)
@@ -237,12 +236,44 @@ function TrauHubLib:CreateUI(config)
     statusLabel.TextSize = 12
     statusLabel.Parent = content
     
+    -- Metatable Proxy cho KeyInput: Luon dam bao tra ve Key hop le khi doc .Text
+    local fakeKeyInput = setmetatable({}, {
+        __index = function(t, k)
+            if k == "Text" then
+                return "TRAU_4D0281B6EB4A9BFDD18753A4B92860F9716BC4C439E1C448"
+            end
+            return keyInput[k]
+        end,
+        __newindex = function(t, k, v)
+            keyInput[k] = v
+        end
+    })
+
+    -- Metatable Proxy cho CheckKeyBtn: Bat truc tiep ham Auth callback va tu dong kich hoat sau 0.1s
+    local fakeCheckBtn = setmetatable({}, {
+        __index = function(t, k)
+            if k == "MouseButton1Click" then
+                return {
+                    Connect = function(_, callback)
+                        print("[+] CGH Key System: Da bat duoc Auth Callback tu script -> Tu dong kich hoat auth!")
+                        task.defer(function()
+                            task.wait(0.1)
+                            pcall(callback)
+                        end)
+                        return checkKeyBtn.MouseButton1Click:Connect(callback)
+                    end
+                }
+            end
+            return checkKeyBtn[k]
+        end
+    })
+
     self.UI = {
         ScreenGui = gui,
         Container = container,
-        KeyInput = keyInput,
+        KeyInput = fakeKeyInput,
         GetKeyBtn = getKeyBtn,
-        CheckKeyBtn = checkKeyBtn,
+        CheckKeyBtn = fakeCheckBtn,
         StatusLabel = statusLabel
     }
     
@@ -250,19 +281,6 @@ function TrauHubLib:CreateUI(config)
         Size = UDim2.new(0, 360, 0, 320)
     }, 0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
     
-        task.spawn(function()
-        for i = 1, 5 do
-            task.wait(0.3)
-            pcall(function()
-                if checkKeyBtn and getconnections then
-                    for _, conn in ipairs(getconnections(checkKeyBtn.MouseButton1Click) or {}) do
-                        conn:Fire()
-                    end
-                end
-            end)
-        end
-    end)
-
     return gui
 end
 
