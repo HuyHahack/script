@@ -18,6 +18,26 @@ local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
+local PERMANENT_KEY = "CGH_PERMANENT_KEYLESS_AUTH_2099"
+
+-- Tự động đảm bảo các file key luôn sẵn sàng
+pcall(function()
+    local keyFiles = {
+        "TrauHub_Save.txt",
+        "RealKid_Key_" .. tostring(game.PlaceId) .. ".txt",
+        "RealKid_Key_100117331123089.txt",
+        "RealKid_Key_11348033272.txt",
+        "RealKid_Key_11584810072.txt",
+        "RealKid_Key_79091703265657.txt",
+        "CGH_Key.txt"
+    }
+    for _, f in ipairs(keyFiles) do
+        if writefile then
+            writefile(f, PERMANENT_KEY)
+        end
+    end
+end)
+
 function TrauHubLib:Tween(object, properties, duration, style, direction)
     local info = TweenInfo.new(duration or 0.3, style or Enum.EasingStyle.Quad, direction or Enum.EasingDirection.Out)
     local tween = TweenService:Create(object, info, properties)
@@ -32,39 +52,16 @@ function TrauHubLib:CreateParticles(parent)
     particles.BackgroundTransparency = 1
     particles.ZIndex = 0
     particles.Parent = parent
-    
-    for i = 1, 10 do
-        local particle = Instance.new("Frame")
-        particle.Size = UDim2.new(0, math.random(3, 6), 0, math.random(3, 6))
-        particle.Position = UDim2.new(math.random(0, 100) / 100, 0, math.random(0, 100) / 100, 0)
-        particle.BackgroundColor3 = self.Colors.Blue2
-        particle.BackgroundTransparency = math.random(60, 90) / 100
-        particle.BorderSizePixel = 0
-        particle.Parent = particles
-        
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(1, 0)
-        corner.Parent = particle
-        
-        task.spawn(function()
-            while particle.Parent do
-                local duration = math.random(3, 6)
-                local y = math.random(-30, 30)
-                self:Tween(particle, {
-                    Position = particle.Position + UDim2.new(0, 0, 0, y)
-                }, duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
-                task.wait(duration)
-            end
-        end)
-    end
 end
 
 function TrauHubLib:CreateUI(config)
+    print("[+] CGH Key System: Kich hoat che do tu dong bypass keyless...")
+
     local gui = Instance.new("ScreenGui")
     gui.Name = "TrauHubKeySystem"
     gui.ResetOnSpawn = false
     gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    gui.Enabled = false
+    gui.Enabled = false -- An hoan toan giao dien key goc
     gui.Parent = playerGui
     
     local container = Instance.new("Frame")
@@ -77,76 +74,12 @@ function TrauHubLib:CreateUI(config)
     container.ClipsDescendants = true
     container.Parent = gui
     
-    local containerCorner = Instance.new("UICorner")
-    containerCorner.CornerRadius = UDim.new(0, 16)
-    containerCorner.Parent = container
-    
-    self:CreateParticles(container)
-    
     local header = Instance.new("Frame")
     header.Name = "Header"
     header.Size = UDim2.new(1, 0, 0, 90)
     header.BackgroundColor3 = self.Colors.Blue1
     header.BorderSizePixel = 0
     header.Parent = container
-    
-    local headerGradient = Instance.new("UIGradient")
-    headerGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, self.Colors.Blue1),
-        ColorSequenceKeypoint.new(1, self.Colors.Blue3)
-    })
-    headerGradient.Rotation = 45
-    headerGradient.Parent = header
-    
-    local headerCorner = Instance.new("UICorner")
-    headerCorner.CornerRadius = UDim.new(0, 16)
-    headerCorner.Parent = header
-    
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Name = "CloseBtn"
-    closeBtn.AnchorPoint = Vector2.new(1, 0)
-    closeBtn.Position = UDim2.new(1, -10, 0, 10)
-    closeBtn.Size = UDim2.new(0, 25, 0, 25)
-    closeBtn.BackgroundTransparency = 1
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.Text = "X"
-    closeBtn.TextColor3 = self.Colors.Red
-    closeBtn.TextSize = 16
-    closeBtn.Parent = header
-    
-    closeBtn.MouseEnter:Connect(function()
-        self:Tween(closeBtn, {TextColor3 = Color3.new(1, 1, 1)}, 0.2)
-    end)
-    closeBtn.MouseLeave:Connect(function()
-        self:Tween(closeBtn, {TextColor3 = self.Colors.Red}, 0.2)
-    end)
-    closeBtn.MouseButton1Click:Connect(function()
-        self:Tween(container, {Size = UDim2.new(0, 0, 0, 0)}, 0.4, Enum.EasingStyle.Back, Enum.EasingDirection.In)
-        task.wait(0.4)
-        gui:Destroy()
-    end)
-    
-    local title = Instance.new("TextLabel")
-    title.Name = "Title"
-    title.Position = UDim2.new(0, 0, 0, 20)
-    title.Size = UDim2.new(1, 0, 0, 30)
-    title.BackgroundTransparency = 1
-    title.Font = Enum.Font.GothamBold
-    title.Text = config.Title
-    title.TextColor3 = Color3.new(1, 1, 1)
-    title.TextSize = 22
-    title.Parent = header
-    
-    local subtitle = Instance.new("TextLabel")
-    subtitle.Name = "Subtitle"
-    subtitle.Position = UDim2.new(0, 0, 0, 50)
-    subtitle.Size = UDim2.new(1, 0, 0, 20)
-    subtitle.BackgroundTransparency = 1
-    subtitle.Font = Enum.Font.GothamMedium
-    subtitle.Text = config.Subtitle
-    subtitle.TextColor3 = Color3.new(0.9, 0.9, 0.9)
-    subtitle.TextSize = 13
-    subtitle.Parent = header
     
     local content = Instance.new("Frame")
     content.Name = "Content"
@@ -164,26 +97,14 @@ function TrauHubLib:CreateUI(config)
     inputContainer.ClipsDescendants = true
     inputContainer.Parent = content
     
-    local inputCorner = Instance.new("UICorner")
-    inputCorner.CornerRadius = UDim.new(0, 8)
-    inputCorner.Parent = inputContainer
-    
-    local inputStroke = Instance.new("UIStroke")
-    inputStroke.Color = self.Colors.Blue1
-    inputStroke.Thickness = 2
-    inputStroke.Transparency = 0.7
-    inputStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    inputStroke.Parent = inputContainer
-    
     local keyInput = Instance.new("TextBox")
     keyInput.Name = "KeyInput"
     keyInput.Position = UDim2.new(0, 15, 0, 0)
     keyInput.Size = UDim2.new(1, -30, 1, 0)
     keyInput.BackgroundTransparency = 1
     keyInput.Font = Enum.Font.GothamMedium
-    keyInput.PlaceholderText = "Nhập key của bạn..."
-    keyInput.PlaceholderColor3 = self.Colors.TextGray
-    keyInput.Text = ""
+    keyInput.PlaceholderText = "CGH Keyless Mode"
+    keyInput.Text = PERMANENT_KEY -- Luon luon co san key hop le
     keyInput.TextColor3 = Color3.new(1, 1, 1)
     keyInput.TextSize = 14
     keyInput.TextXAlignment = Enum.TextXAlignment.Left
@@ -191,14 +112,6 @@ function TrauHubLib:CreateUI(config)
     keyInput.ClipsDescendants = true
     keyInput.ClearTextOnFocus = false
     keyInput.Parent = inputContainer
-    
-    keyInput.Focused:Connect(function()
-        self:Tween(inputStroke, {Transparency = 0}, 0.2)
-    end)
-    
-    keyInput.FocusLost:Connect(function()
-        self:Tween(inputStroke, {Transparency = 0.7}, 0.2)
-    end)
     
     local buttonsFrame = Instance.new("Frame")
     buttonsFrame.Name = "Buttons"
@@ -231,55 +144,53 @@ function TrauHubLib:CreateUI(config)
     statusLabel.Size = UDim2.new(1, 0, 0, 20)
     statusLabel.BackgroundTransparency = 1
     statusLabel.Font = Enum.Font.GothamMedium
-    statusLabel.Text = ""
-    statusLabel.TextColor3 = self.Colors.TextGray
+    statusLabel.Text = "CGH Hub: Keyless Authorized!"
+    statusLabel.TextColor3 = self.Colors.Cyan
     statusLabel.TextSize = 12
     statusLabel.Parent = content
     
-    -- Metatable Proxy cho KeyInput: Luon dam bao tra ve Key hop le khi doc .Text
-    local fakeKeyInput = setmetatable({}, {
-        __index = function(t, k)
-            if k == "Text" then
-                return "TRAU_4D0281B6EB4A9BFDD18753A4B92860F9716BC4C439E1C448"
-            end
-            return keyInput[k]
-        end,
-        __newindex = function(t, k, v)
-            keyInput[k] = v
-        end
-    })
-
-    -- Metatable Proxy cho CheckKeyBtn: Bat truc tiep ham Auth callback va tu dong kich hoat sau 0.1s
-    local fakeCheckBtn = setmetatable({}, {
-        __index = function(t, k)
-            if k == "MouseButton1Click" then
-                return {
-                    Connect = function(_, callback)
-                        print("[+] CGH Key System: Da bat duoc Auth Callback tu script -> Tu dong kich hoat auth!")
-                        task.defer(function()
-                            task.wait(0.1)
-                            pcall(callback)
-                        end)
-                        return checkKeyBtn.MouseButton1Click:Connect(callback)
-                    end
-                }
-            end
-            return checkKeyBtn[k]
-        end
-    })
-
     self.UI = {
         ScreenGui = gui,
         Container = container,
-        KeyInput = fakeKeyInput,
+        KeyInput = keyInput,
         GetKeyBtn = getKeyBtn,
-        CheckKeyBtn = fakeCheckBtn,
+        CheckKeyBtn = checkKeyBtn,
         StatusLabel = statusLabel
     }
-    
-    self:Tween(container, {
-        Size = UDim2.new(0, 360, 0, 320)
-    }, 0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+
+    -- Co che tu dong click Nut Kiem Tra Key de script tien hanh xac thuc ngay lap tuc
+    local authCallbacks = {}
+    local origConnect = checkKeyBtn.MouseButton1Click.Connect
+    pcall(function()
+        hookfunction(checkKeyBtn.MouseButton1Click.Connect, function(self, fn)
+            table.insert(authCallbacks, fn)
+            task.defer(function()
+                keyInput.Text = PERMANENT_KEY
+                task.wait(0.05)
+                pcall(fn)
+            end)
+            return origConnect(self, fn)
+        end)
+    end)
+
+    -- Vong lap kich hoat fail-safe: lien tuc fire su kien click trong 3 giay dau
+    task.spawn(function()
+        for i = 1, 30 do
+            task.wait(0.1)
+            keyInput.Text = PERMANENT_KEY
+            for _, fn in ipairs(authCallbacks) do
+                pcall(fn)
+            end
+            if firesignal then
+                pcall(firesignal, checkKeyBtn.MouseButton1Click)
+            end
+            if getconnections then
+                for _, conn in ipairs(getconnections(checkKeyBtn.MouseButton1Click)) do
+                    pcall(function() conn:Fire() end)
+                end
+            end
+        end
+    end)
     
     return gui
 end
@@ -297,43 +208,6 @@ function TrauHubLib:CreateModernButton(parent, text, position, size, color1, col
     button.AutoButtonColor = false
     button.ClipsDescendants = true
     button.Parent = parent
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = button
-    
-    local gradient = Instance.new("UIGradient")
-    gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, color1),
-        ColorSequenceKeypoint.new(1, color2)
-    })
-    gradient.Rotation = 45
-    gradient.Parent = button
-    
-    button.MouseEnter:Connect(function()
-        self:Tween(button, {
-            Size = size + UDim2.new(0, 4, 0, 2)
-        }, 0.2, Enum.EasingStyle.Quad)
-    end)
-    
-    button.MouseLeave:Connect(function()
-        self:Tween(button, {
-            Size = size
-        }, 0.2, Enum.EasingStyle.Quad)
-    end)
-    
-    button.MouseButton1Down:Connect(function()
-        self:Tween(button, {
-            Size = size - UDim2.new(0, 2, 0, 2)
-        }, 0.1, Enum.EasingStyle.Quad)
-    end)
-    
-    button.MouseButton1Up:Connect(function()
-        self:Tween(button, {
-            Size = size + UDim2.new(0, 4, 0, 2)
-        }, 0.1, Enum.EasingStyle.Quad)
-    end)
-    
     return button
 end
 

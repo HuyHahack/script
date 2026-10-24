@@ -1,7 +1,7 @@
 if getgenv().Nousigi or getgenv().CGH then 
 	if game.CoreGui:FindFirstChild("Nousigi Hub GUI") or game.CoreGui:FindFirstChild("CGH Hub GUI") then
 		for i, v in ipairs(game.CoreGui:GetChildren()) do
-			if string.find(v.Name, "Nousigi Hub") or string.find(v.Name, "CGH Hub") then
+			if string.find(v.Name, "CGH Hub") or string.find(v.Name, "CGH Hub") then
 				v:Destroy()
 			end
 		end
@@ -36,7 +36,7 @@ local T1UIColor = {
 	["Page Selected Color"] = Color3.fromRGB(220, 20, 40),
 	["Section Text Color"] = Color3.fromRGB(220, 220, 210),
 	["Section Underline Color"] = Color3.fromRGB(220, 20, 40),
-	["Toggle Border Color"] = Color3.fromRGB(220, 20, 40),
+	["Toggle Border Color"] = Color3.fromRGB(255, 215, 0),
 	["Toggle Checked Color"] = Color3.fromRGB(255, 215, 0),
 	["Toggle Desc Color"] = Color3.fromRGB(185, 185, 185),
 	["Button Color"] = Color3.fromRGB(220, 20, 40),

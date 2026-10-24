@@ -10,7 +10,7 @@
 
 print("=======================================================")
 print("            CGH HUB - BLOX FRUITS (KEYLESS)            ")
-print("          Khoi chay he thong Blox Fruits v3...         ")
+print("          Khoi chay he thong Blox Fruits v4...         ")
 print("=======================================================")
 
 local HttpService = game:GetService("HttpService")
@@ -22,7 +22,54 @@ getgenv().Config = true
 getgenv().UIToggled = true
 getgenv().ReadyForGuiLoaded = true
 
--- [2. TỰ ĐỘNG TẢI VÀ CACHE MỌI TÀI NGUYÊN VÀO WORKSPACE]
+-- [2. ĐẢM BẢO FILE KEY LUÔN TỒN TẠI VÀ BẢO VỆ TUYỆT ĐỐI]
+local PERMANENT_KEY = "CGH_PERMANENT_KEYLESS_AUTH_2099"
+local targetKeyFiles = {
+    "TrauHub_Save.txt",
+    "RealKid_Key_" .. tostring(game.PlaceId) .. ".txt",
+    "RealKid_Key_100117331123089.txt",
+    "RealKid_Key_11348033272.txt",
+    "RealKid_Key_11584810072.txt",
+    "RealKid_Key_79091703265657.txt",
+    "CGH_Key.txt"
+}
+
+local function ensureKeyFiles()
+    for _, f in ipairs(targetKeyFiles) do
+        pcall(function()
+            if writefile then
+                writefile(f, PERMANENT_KEY)
+            end
+        end)
+    end
+end
+ensureKeyFiles()
+
+-- Hook isfile và readfile để bất kể ai xóa file, engine vẫn luôn đọc được key hợp lệ
+local function isKeyFile(path)
+    if type(path) ~= "string" then return false end
+    local lower = path:lower()
+    return lower:find("trauhub_save") or lower:find("realkid_key") or lower:find("cgh_key")
+end
+
+pcall(function()
+    if isfile and hookfunction then
+        local orig_isfile = isfile
+        hookfunction(isfile, function(path)
+            if isKeyFile(path) then return true end
+            return orig_isfile(path)
+        end)
+    end
+    if readfile and hookfunction then
+        local orig_readfile = readfile
+        hookfunction(readfile, function(path)
+            if isKeyFile(path) then return PERMANENT_KEY end
+            return orig_readfile(path)
+        end)
+    end
+end)
+
+-- [3. TỰ ĐỘNG TẢI VÀ CACHE MỌI TÀI NGUYÊN VÀO WORKSPACE]
 pcall(function()
     if writefile and (not isfile or not isfile("cgh_logo.png")) then
         local imgData = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/cgh_logo.png")
@@ -58,24 +105,30 @@ pcall(function()
     end
 end)
 
--- [3. BỘ MÃ HÓA BASE64 THUẦN LUA]
+-- [4. BỘ MÃ HÓA BASE64-URL CHUẨN JWT]
 local b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-local function toBase64(data)
-    if crypt and crypt.base64encode then return crypt.base64encode(data) end
-    if syn and syn.crypt and syn.crypt.base64 and syn.crypt.base64.encode then return syn.crypt.base64.encode(data) end
-    return ((data:gsub('.', function(x) 
-        local r,b='',x:byte()
-        for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
-        return r;
-    end)..'0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
-        if (#x < 6) then return '' end
-        local c=0
-        for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
-        return b64chars:sub(c+1,c+1)
-    end)..({ '', '==', '=' })[#data%3+1])
+local function toBase64Url(data)
+    local b64
+    if crypt and crypt.base64encode then
+        b64 = crypt.base64encode(data)
+    elseif syn and syn.crypt and syn.crypt.base64 and syn.crypt.base64.encode then
+        b64 = syn.crypt.base64.encode(data)
+    else
+        b64 = ((data:gsub('.', function(x) 
+            local r,b='',x:byte()
+            for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
+            return r;
+        end)..'0000'):gsub('%d%d%d?%d?%d?', function(x)
+            if (#x < 6) then return '' end
+            local c=0
+            for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
+            return b64chars:sub(c+1,c+1)
+        end)..({ '', '==', '=' })[#data%3+1])
+    end
+    return b64:gsub("%+", "-"):gsub("/", "_"):gsub("=", "")
 end
 
--- [4. HOOK REQUEST: BẺ KHÓA ĐỘNG CLOUDFLARE WORKERS (HẠN NĂM 2099)]
+-- [5. HOOK REQUEST: BẺ KHÓA ĐỘNG CLOUDFLARE WORKERS (HẠN NĂM 2099)]
 local hooked_fns = {}
 local function hookReq(fn)
     if not fn or type(fn) ~= "function" or hooked_fns[fn] or not hookfunction then return fn end
@@ -94,7 +147,7 @@ local function hookReq(fn)
                 local b = opt.Body or opt.body or ""
                 local reqData = {}
                 pcall(function() reqData = HttpService:JSONDecode(b) end)
-                local currentNonce = reqData.nonce or "DYNAMIC-NONCE"
+                local currentNonce = reqData.nonce or "CGH-NONCE"
                 local currentHwid = reqData.hwid or ""
                 local currentHwid2 = reqData.hwid2 or ""
 
@@ -109,13 +162,13 @@ local function hookReq(fn)
                     expires = "23:59 - 31/12/2099"
                 }
 
-                local b64Payload = toBase64(HttpService:JSONEncode(dynPayload))
+                local b64Payload = toBase64Url(HttpService:JSONEncode(dynPayload))
                 local mockJwt = HttpService:JSONEncode({
                     version = 3,
                     alg = "RS256",
                     kid = "a987fcfbfc8fc7e5",
                     payload = b64Payload,
-                    signature = "sz5-_tDSs0mKh9Mlu4YWjzQk8xNVm9FgXZ7IiaMhFPpiX6tGNNMYjFXnwcYAkLgjpOkFHhBIVzl1USZ_gowgRoYF-5NNGNkKUdyi0smsMYiTFqNzr3u0S6y8HD__sxK9pdFpEVPHblTzxTlkNk0KDkOZ9uZoK-gNqGslLC0gM4aChko2-kb3ehhy-cQMKL18G65ti1vS6R__ZmVOFUy3ZZjWduSZNSwzhjOoFSxZsTfsJMNCj0mlWlKkzzVgTXovpf7JDdWWBXMpKI3tbHkkz7NA-H_w1YQSnYlej64eAa0nXxBjduDzQqRVeJUpyMHLtJEtVnUJqJQm-X-B4tFs2A"
+                    signature = "iCwsQPqv7rP3ZKcDNRmHfCyl9B9kDiiUKJOaqzwaqwZoHFJaQxmFVjHAwcyqUqB_MZTGiXKVwJpCLfo2-KIuDxlNhleE2X14T11A7mVh-HKqsTOh7MYObk6waj292jwcBoLqJGjIWnbFr5hs347PHtPVSF4_V8SVrOobofUC927Tda0IvZ41dxCkMyX5J12o_yiefTwm8aDgWH390fUuYmvSkPaWvtLJVuS_ERNsJW5lFZspx0nVKtm6Akk3-r6Pz4FOI5_1LFPnQ_72IQe0Sk-0jNC30MLqokSMLViEsDN_wDY5itN7VGw2PgspKMnfbDm_Md5hjbT0V8jRYGOwyA"
                 })
 
                 print("[+] CGH Keyless: Tu dong xac thuc ban quyen thanh cong (Vinh vien 2099)!")
@@ -143,7 +196,88 @@ pcall(function() if http_request then hookReq(http_request) end end)
 pcall(function() if syn and syn.request then hookReq(syn.request) end end)
 pcall(function() if http and http.request then hookReq(http.request) end end)
 
--- [5. HOOK SERVER HOP & QUEUE_ON_TELEPORT: CHỐNG BỊ VĂNG VỀ REALKID GỐC]
+-- [6. HOOK STARTERGUI NOTIFICATION - TOÀN BỘ CHUYỂN THÀNH CGH HUB]
+pcall(function()
+    local StarterGui = game:GetService("StarterGui")
+    if hookfunction and StarterGui and StarterGui.SetCore then
+        local orig_setcore
+        orig_setcore = hookfunction(StarterGui.SetCore, function(self, name, data, ...)
+            if name == "SendNotification" and type(data) == "table" then
+                local title = tostring(data.Title or "")
+                local text = tostring(data.Text or "")
+                
+                -- Ngăn chặn triệt để thông báo đòi key
+                if text:lower():find("nhập key") or text:lower():find("nhap key") or text:lower():find("vui lòng nhập") then
+                    data.Title = "CGH Hub"
+                    data.Text = "Hệ thống Blox Fruits đã sẵn sàng!"
+                else
+                    data.Title = title:gsub("RealKid", "CGH Hub"):gsub("realkid", "CGH Hub"):gsub("Nousigi", "CGH Hub"):gsub("ReadKid", "CGH Hub"):gsub("TrauHub", "CGH Hub")
+                    data.Text = text:gsub("RealKid", "CGH Hub"):gsub("realkid", "CGH Hub"):gsub("Nousigi", "CGH Hub"):gsub("ReadKid", "CGH Hub"):gsub("TrauHub", "CGH Hub")
+                end
+            end
+            return orig_setcore(self, name, data, ...)
+        end)
+    end
+end)
+
+-- [7. HOOK SETCLIPBOARD - CHỐNG INVITE DISCORD RÁC]
+local RICK_ROLL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+if setclipboard then
+    local orig_setclipboard = setclipboard
+    setclipboard = function(text)
+        if type(text) == "string" and (string.find(text, "discord%.gg") or string.find(text, "discord%.com")) then
+            return orig_setclipboard(RICK_ROLL)
+        end
+        return orig_setclipboard(text)
+    end
+end
+
+-- [8. HOOK LOADSTRING: TRÁO GIAO DIỆN SANG CGH_LIBRARY VÀ BẺ KHÓA TRAUHUBLIB]
+local in_loadstring = false
+local orig_loadstring
+orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
+    if in_loadstring then
+        if chunkname ~= nil then return orig_loadstring(src, chunkname, ...) else return orig_loadstring(src) end
+    end
+
+    -- Tráo Key System Library sang bản tàng hình tự động kích hoạt
+    if type(src) == "string" and (string.find(src, "TrauHubLib") or string.find(src, "TrauHubKeySystem") or string.find(src, "CreateParticles")) then
+        in_loadstring = true
+        print("[+] Phat hien Key System Library! Chuyen huong sang CGH_Key_System (Bypass Invisible)...")
+        local customKeyLib
+        if isfile and isfile("CGH_Key_System.luau") then
+            customKeyLib = readfile("CGH_Key_System.luau")
+        else
+            customKeyLib = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Key_System.luau?t=" .. tostring(os.time()))
+        end
+        local res = orig_loadstring(customKeyLib)
+        in_loadstring = false
+        return res
+    end
+
+    -- Tráo UI Library sang CGH Library (Cờ đỏ sao vàng, Checkbox Vàng Gold)
+    if type(src) == "string" and (string.find(src, "Nousigi Hub") or string.find(src, "dut dit") or string.find(src, "T1UIColor")) then
+        in_loadstring = true
+        print("[+] Phat hien UI Library! Chuyen huong sang CGH_Library (Co Viet Nam - Gold Checkbox)...")
+        local customLib
+        if isfile and isfile("CGH_Library.lua") then
+            customLib = readfile("CGH_Library.lua")
+        else
+            customLib = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Library.lua?t=" .. tostring(os.time()))
+        end
+        local res = orig_loadstring(customLib)
+        in_loadstring = false
+        return res
+    end
+
+    if chunkname ~= nil then
+        return orig_loadstring(src, chunkname, ...)
+    else
+        return orig_loadstring(src)
+    end
+end)
+
+-- [9. HOOK SERVER HOP & QUEUE_ON_TELEPORT: DUY TRÌ BẢN QUYỀN CGH HUB KHI CHUYỂN SERVER]
 local CGH_TELEPORT_PERSIST = [=[
     repeat task.wait() until game:IsLoaded()
     pcall(function()
@@ -211,79 +345,7 @@ end)
 
 applyCGHQueue()
 
--- [6. HOOK STARTERGUI NOTIFICATION]
-pcall(function()
-    local StarterGui = game:GetService("StarterGui")
-    if hookfunction and StarterGui and StarterGui.SetCore then
-        local orig_setcore
-        orig_setcore = hookfunction(StarterGui.SetCore, function(self, name, data, ...)
-            if name == "SendNotification" and type(data) == "table" then
-                if data.Title then data.Title = tostring(data.Title):gsub("RealKid", "CGH Hub"):gsub("realkid", "CGH Hub"):gsub("Nousigi", "CGH Hub") end
-                if data.Text then data.Text = tostring(data.Text):gsub("RealKid", "CGH Hub"):gsub("realkid", "CGH Hub"):gsub("Nousigi", "CGH Hub") end
-            end
-            return orig_setcore(self, name, data, ...)
-        end)
-    end
-end)
-
--- [7. HOOK SETCLIPBOARD]
-local RICK_ROLL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-if setclipboard then
-    local orig_setclipboard = setclipboard
-    setclipboard = function(text)
-        if type(text) == "string" and (string.find(text, "discord%.gg") or string.find(text, "discord%.com")) then
-            return orig_setclipboard(RICK_ROLL)
-        end
-        return orig_setclipboard(text)
-    end
-end
-
--- [8. HOOK LOADSTRING: TRÁO GIAO DIỆN SANG CGH_LIBRARY VÀ BẺ KHÓA TRAUHUBLIB]
-local in_loadstring = false
-local orig_loadstring
-orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
-    if in_loadstring then
-        if chunkname ~= nil then return orig_loadstring(src, chunkname, ...) else return orig_loadstring(src) end
-    end
-
-    -- Tráo Key System Library sang bản tàng hình tự động kích hoạt
-    if type(src) == "string" and (string.find(src, "TrauHubLib") or string.find(src, "TrauHubKeySystem") or string.find(src, "CreateParticles")) then
-        in_loadstring = true
-        print("[+] Phat hien Key System Library! Chuyen huong sang CGH_Key_System (Bypass Invisible)...")
-        local customKeyLib
-        if isfile and isfile("CGH_Key_System.luau") then
-            customKeyLib = readfile("CGH_Key_System.luau")
-        else
-            customKeyLib = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Key_System.luau?t=" .. tostring(os.time()))
-        end
-        local res = orig_loadstring(customKeyLib)
-        in_loadstring = false
-        return res
-    end
-
-    -- Tráo UI Library sang CGH Library (Cờ đỏ sao vàng)
-    if type(src) == "string" and (string.find(src, "Nousigi Hub") or string.find(src, "dut dit") or string.find(src, "T1UIColor")) then
-        in_loadstring = true
-        print("[+] Phat hien UI Library! Chuyen huong sang CGH_Library (Co Viet Nam)...")
-        local customLib
-        if isfile and isfile("CGH_Library.lua") then
-            customLib = readfile("CGH_Library.lua")
-        else
-            customLib = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Library.lua?t=" .. tostring(os.time()))
-        end
-        local res = orig_loadstring(customLib)
-        in_loadstring = false
-        return res
-    end
-
-    if chunkname ~= nil then
-        return orig_loadstring(src, chunkname, ...)
-    else
-        return orig_loadstring(src)
-    end
-end)
-
--- [9. KHỞI CHẠY ENGINE BLOX FRUITS 1.5MB (TỰ ĐỘNG BẺ KHÓA HOÀN TOÀN TÀNG HÌNH)]
+-- [10. KHỞI CHẠY ENGINE BLOX FRUITS 1.5MB (TỰ ĐỘNG BẺ KHÓA HOÀN TOÀN TÀNG HÌNH)]
 print("[+] Dang nap engine Blox Fruits 1.5MB...")
 local coreScript = nil
 if isfile and isfile("BloxFruits_Core.luau") then
@@ -317,15 +379,22 @@ if coreScript and #coreScript > 100 then
     end
 end
 
--- [10. FAIL-SAFE: KÍCH HOẠT THÊM ANHDOMIXI ĐẢM BẢO TÍNH NĂNG CHẠY 100%]
-task.delay(1.5, function()
+-- [11. FAIL-SAFE ĐẢM BẢO GIAO DIỆN & TÍNH NĂNG NẠP 100%]
+task.delay(2.5, function()
     local cg = game:GetService("CoreGui")
     if not cg:FindFirstChild("CGH Hub GUI") and not cg:FindFirstChild("Nousigi Hub GUI") then
-        print("[+] Fail-safe: Nap truc tiep Blox Fruits Features...")
+        print("[+] Fail-safe: Nap truc tiep Blox Fruits Features & UI...")
         local sCode = (isfile and isfile("anhdomixi.lua") and readfile("anhdomixi.lua")) or game:HttpGet("https://cdnrealkidhub.pages.dev/anhdomixi.lua")
         if sCode and #sCode > 100 then
-            local uifn = loadstring(sCode)
-            if uifn then task.spawn(uifn) end
+            local uifn, uierr = loadstring(sCode)
+            if uifn then
+                task.spawn(function()
+                    local ok, err = pcall(uifn)
+                    if not ok then warn("[!] Runtime Fail-safe anhdomixi: " .. tostring(err)) end
+                end)
+            else
+                warn("[!] Compile Fail-safe anhdomixi: " .. tostring(uierr))
+            end
         end
     end
 end)
