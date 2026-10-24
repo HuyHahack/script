@@ -180,7 +180,7 @@ local function hookReq(fn)
                     hwid2 = currentHwid2,
                     keyHash = currentKeyHash,
                     status = "AUTHORIZED",
-                    expires = "23:59 - 31/12/2099"
+                    expires = "23:59 - 31/12/2035"
                 }
 
                 local b64Payload = toBase64Url(HttpService:JSONEncode(dynPayload))
@@ -216,6 +216,9 @@ pcall(function() if request then hookReq(request) end end)
 pcall(function() if http_request then hookReq(http_request) end end)
 pcall(function() if syn and syn.request then hookReq(syn.request) end end)
 pcall(function() if http and http.request then hookReq(http.request) end end)
+
+
+end
 
 -- [6. HOOK GAME.HTTPGET: PHỤC VỤ OFFLINE 100% CÁC FILE TRONG WORKSPACE]
 pcall(function()
@@ -288,7 +291,12 @@ end
 -- [9. HOOK LOADSTRING: TRÁO GIAO DIỆN SANG CGH_LIBRARY VÀ BẺ KHÓA TRAUHUBLIB]
 local in_loadstring = false
 local orig_loadstring
-orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
+if not getgenv().__CGH_LS_HOOKED then
+    getgenv().__CGH_LS_HOOKED = true
+    orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
+        if type(src) ~= "string" then
+            if chunkname ~= nil then return orig_loadstring(src, chunkname, ...) else return orig_loadstring(src) end
+        end
     if in_loadstring then
         if chunkname ~= nil then return orig_loadstring(src, chunkname, ...) else return orig_loadstring(src) end
     end
@@ -329,6 +337,9 @@ orig_loadstring = hookfunction(loadstring, function(src, chunkname, ...)
         return orig_loadstring(src)
     end
 end)
+
+
+end
 
 -- [10. HOOK SERVER HOP & QUEUE_ON_TELEPORT: DUY TRÌ BẢN QUYỀN CGH HUB KHI CHUYỂN SERVER]
 local CGH_TELEPORT_PERSIST = [=[
