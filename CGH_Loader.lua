@@ -17,18 +17,16 @@ local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
-local TeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 local lp = Players.LocalPlayer or Players.PlayerAdded:Wait()
 
--- [1. THIẾT LẬP MÔI TRƯỜNG & TRẠNG THÁI TOÀN CỤC CHO CGH HUB]
+-- [1. THIẾT LẬP MÔI TRƯỜNG TOÀN CỤC CHO CGH HUB]
 getgenv().Nousigi = true
 getgenv().CGH = true
 getgenv().Config = true
 getgenv().UIToggled = true
-getgenv().ReadyForGuiLoaded = true
 
--- [2. HẰNG SỐ XÁC THỰC BẢN QUYỀN HOÀN TOÀN CHUẨN XÁC VỚI CHỮ KÝ RSA]
+-- [2. HẰNG SỐ XÁC THỰC BẢN QUYỀN CHUẨN XÁC VỚI CHỮ KÝ RSA]
 local TARGET_NONCE = "CFE2E69F-0E32-4DF7-88E7-EC7FBD07DF9E"
 local TARGET_KEY = "TRAU_4D0281B6EB4A9BFDD18753A4B92860F9716BC4C439E1C448"
 local REAL_SIGNED_JWT = [===[{"version":3,"alg":"RS256","kid":"a987fcfbfc8fc7e5","payload":"eyJ2ZXJzaW9uIjozLCJhdWRpZW5jZSI6InJlYWxraWQtYXV0aCIsIm5vbmNlIjoiQ0ZFMkU2OUYtMEUzMi00REY3LTg4RTctRUM3RkJEMDdERjlFIiwiaHdpZCI6IjdiNjEzODYyNjUzMzMxMzQzMDJkMzkzMTY0NjUyZDMxMzE2NjMxMmQzOTMzNjYzOTJkMzgzMDM2NjUzNjY2MzY2NTM2MzkzNjMzN2QiLCJod2lkMiI6IkVGNTcwNTEzLUVDQzMtNDI2MC04RDJCLTk5NUM4RDg0OUI4NSIsImtleUhhc2giOiJlOWEyZWUzMjAxZjI5OGEyOGNjOWMyZTQzZGY1YmE1MDM4NGY0ZTg3ZDEyOGZjNjFmNWY3Y2NjMGMzNDkzOTZkIiwic3RhdHVzIjoiQVVUSE9SSVpFRCIsImV4cGlyZXMiOiIxODozNiAtIDI1LzEwLzIwMjYifQ","signature":"iCwsQPqv7rP3ZKcDNRmHfCyl9B9kDiiUKJOaqzwaqwZoHFJaQxmFVjHAwcyqUqB_MZTGiXKVwJpCLfo2-KIuDxlNhleE2X14T11A7mVh-HKqsTOh7MYObk6waj292jwcBoLqJGjIWnbFr5hs347PHtPVSF4_V8SVrOobofUC927Tda0IvZ41dxCkMyX5J12o_yiefTwm8aDgWH390fUuYmvSkPaWvtLJVuS_ERNsJW5lFZspx0nVKtm6Akk3-r6Pz4FOI5_1LFPnQ_72IQe0Sk-0jNC30MLqokSMLViEsDN_wDY5itN7VGw2PgspKMnfbDm_Md5hjbT0V8jRYGOwyA"}]===]
@@ -174,15 +172,17 @@ if not getgenv().__CGH_HTTPGET_HOOKED then
     end)
 end
 
--- [7. TỰ ĐỘNG DUY TRÌ BẢN QUYỀN CGH HUB KHI HOP SERVER / TELEPORT]
+-- [7. TỰ ĐỘNG KÍCH HOẠT KHI HOP SERVER CHO BẢN MAIN (SẠCH, CHUẨN XÁC 100%)]
+local real_qot = (syn and syn.queue_on_teleport) or queue_on_teleport or (fluxus and fluxus.queue_on_teleport) or queueonteleport
+
 local CGH_TELEPORT_PERSIST = [=[
     task.spawn(function()
         if not game:IsLoaded() then
             game.Loaded:Wait()
         end
         local Players = game:GetService("Players")
-        local lp = Players.LocalPlayer or Players.PlayerAdded:Wait()
-        task.wait(1)
+        local p = Players.LocalPlayer or Players.PlayerAdded:Wait()
+        task.wait(1.5)
         pcall(function()
             if isfile and isfile("CGH_Loader.lua") then
                 loadstring(readfile("CGH_Loader.lua"))()
@@ -193,54 +193,23 @@ local CGH_TELEPORT_PERSIST = [=[
     end)
 ]=]
 
-local function getQOT()
-    return queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport) or queueonteleport
-end
-
-local function applyHopQueue()
-    local q = getQOT()
-    if q then pcall(function() q(CGH_TELEPORT_PERSIST) end) end
-end
-
-pcall(function()
-    local orig_q = getQOT()
-    if orig_q and hookfunction then
-        hookfunction(orig_q, function(script_str)
-            return orig_q(CGH_TELEPORT_PERSIST)
+local function registerTeleportQueue()
+    if real_qot and type(real_qot) == "function" then
+        pcall(function()
+            real_qot(CGH_TELEPORT_PERSIST)
         end)
     end
-    local cgh_hop_qot = function(str)
-        local raw = getQOT()
-        if raw then return raw(CGH_TELEPORT_PERSIST) end
-    end
-    queue_on_teleport = cgh_hop_qot
-    if syn then syn.queue_on_teleport = cgh_hop_qot end
-    if fluxus then fluxus.queue_on_teleport = cgh_hop_qot end
-    queueonteleport = cgh_hop_qot
-end)
+end
 
+-- Xếp hàng kích hoạt ngay khi load script
+registerTeleportQueue()
+
+-- Tự động xếp hàng lại mỗi khi người chơi bắt đầu rời server qua teleport
 pcall(function()
-    if lp then
-        lp.OnTeleport:Connect(function(state)
-            applyHopQueue()
-        end)
-    end
+    lp.OnTeleport:Connect(function(state)
+        registerTeleportQueue()
+    end)
 end)
-
-pcall(function()
-    local tpMethods = {"Teleport", "TeleportToPlaceInstance", "TeleportPartyAsync", "TeleportToSpawnByName"}
-    for _, method in ipairs(tpMethods) do
-        if TeleportService[method] and hookfunction then
-            local orig_method
-            orig_method = hookfunction(TeleportService[method], function(self, ...)
-                applyHopQueue()
-                return orig_method(self, ...)
-            end)
-        end
-    end
-end)
-
-applyHopQueue()
 
 -- [8. HOOK STARTERGUI NOTIFICATION - ĐỔI TÊN SANG CGH HUB]
 pcall(function()
@@ -287,7 +256,8 @@ task.spawn(function()
             getgenv().UIColor["Button Color"] = CRIMSON
             getgenv().UIColor["Section Underline Color"] = GOLD
             getgenv().UIColor["Page Selected Color"] = GOLD
-            getgenv().UIColor["Dropdown Selected Color"] = GOLD
+            getgenv().UIColor["Dropdown Selected Color"] = CRIMSON
+            getgenv().UIColor["Dropdown Selected Check Color"] = CRIMSON
             getgenv().UIColor["Slider Line Color"] = GOLD
             getgenv().UIColor["Slider Highlight Color"] = CRIMSON
             getgenv().UIColor["Search Icon Highlight Color"] = GOLD
@@ -344,6 +314,17 @@ task.spawn(function()
                 end
                 if d:IsA("UIStroke") and d.Color == Color3.fromRGB(0, 170, 255) then
                     d.Color = GOLD
+                end
+                -- Dropdown item chọn người chơi (SampleItemBG) -> Đỏ Crimson thay vì xanh dương
+                if d.Name == "SampleItemBG" and d:IsA("Frame") then
+                    if d.BackgroundColor3.B > d.BackgroundColor3.R and d.BackgroundColor3.B > 0.35 then
+                        d.BackgroundColor3 = CRIMSON
+                    end
+                end
+                if d.Name == "SampleItemCheck" and d:IsA("ImageButton") then
+                    if d.ImageColor3.B > d.ImageColor3.R and d.ImageColor3.B > 0.35 then
+                        d.ImageColor3 = GOLD
+                    end
                 end
             end
         end
