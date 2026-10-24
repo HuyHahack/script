@@ -35,6 +35,13 @@ pcall(function()
 end)
 
 pcall(function()
+    if writefile and (not isfile or not isfile("CGH_Key_System.luau")) then
+        local keyLib = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Key_System.luau?t=" .. tostring(os.time()))
+        writefile("CGH_Key_System.luau", keyLib)
+    end
+end)
+
+pcall(function()
     if writefile and (not isfile or not isfile("RealKidHop_Raw.lua")) then
         local rawHop = game:HttpGet("https://cdnrealkidhub.pages.dev/RealKidHop.lua")
         writefile("RealKidHop_Raw.lua", rawHop)
@@ -144,7 +151,7 @@ pcall(function() if http_request then hookReq(http_request) end end)
 pcall(function() if syn and syn.request then hookReq(syn.request) end end)
 pcall(function() if http and http.request then hookReq(http.request) end end)
 
--- [5. HOOK LOADSTRING: TRÁO GIAO DIỆN SANG CGH_HOP_LIBRARY CỜ VIỆT NAM]
+-- [5. HOOK LOADSTRING: TRÁO GIAO DIỆN SANG CGH_HOP_LIBRARY VÀ BẺ KHÓA TRAUHUBLIB]
 pcall(function()
     if hookfunction and loadstring then
         local in_ls = false
@@ -152,6 +159,21 @@ pcall(function()
         orig_ls = hookfunction(loadstring, function(src, chunkname, ...)
             if in_ls then
                 if chunkname ~= nil then return orig_ls(src, chunkname, ...) else return orig_ls(src) end
+            end
+
+            -- Tráo Key System Library sang bản tàng hình tự động kích hoạt
+            if type(src) == "string" and (string.find(src, "TrauHubLib") or string.find(src, "TrauHubKeySystem") or string.find(src, "CreateParticles")) then
+                in_ls = true
+                print("[+] Phat hien Key System Library! Chuyen huong sang CGH_Key_System (Bypass Invisible)...")
+                local customKeyLib
+                if isfile and isfile("CGH_Key_System.luau") then
+                    customKeyLib = readfile("CGH_Key_System.luau")
+                else
+                    customKeyLib = game:HttpGet("https://raw.githubusercontent.com/HuyHahack/script/main/CGH_Key_System.luau?t=" .. tostring(os.time()))
+                end
+                local res = orig_ls(customKeyLib)
+                in_ls = false
+                return res
             end
 
             if type(src) == "string" and (string.find(src, "tlredz") or string.find(src, "redz-V5-remake") or string.find(src, "MakeWindow")) then
